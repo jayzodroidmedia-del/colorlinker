@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@layout/anythink_*,@layout/secmtp_*,@drawable/anythink_*,@drawable/secmtp_*,@id/anythink_*,@id/secmtp_*,@string/anythink_*,@string/secmtp_*,@style/anythink_*,@style/secmtp_*" />

@@ -1,0 +1,38 @@
+﻿pluginManagement {
+    repositories {
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        // Anythink (Core)
+        maven {
+            url = uri("https://jfrog.anythinktech.com/artifactory/overseas_sdk")
+        }
+        // Ironsource
+        maven {
+            url = uri("https://android-sdk.is.com/")
+        }
+        // Mintegral
+        maven {
+            url = uri("https://dl-maven-android.mintegral.com/repository/mbridge_android_sdk_oversea")
+        }
+    }
+}
+
+rootProject.name = "ColorLinker"
+include(":app")

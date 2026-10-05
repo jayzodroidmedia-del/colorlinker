@@ -1,0 +1,77 @@
+# ==========================================
+# Root .gitignore for ColorLinker Project
+# (Android App + PHP Backend + UI Assets)
+# ==========================================
+
+# --- Android & Gradle Builds ---
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+**/bin/
+**/gen/
+**/out/
+**/build/
+.gradle/
+buildOutput/
+
+# Android Studio / IntelliJ IDEA
+*.iml
+.idea/
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/runConfigurations/
+*.iws
+*.ipr
+captures/
+.navigation/
+.cxx/
+.externalNativeBuild/
+
+# Local configuration files (SDK path, machine specific)
+local.properties
+.bundle/
+
+# Signing / Keystores
+*.jks
+*.keystore
+
+# --- PHP Backend / Web ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+**/vendor/
+.env
+.env.local
+.env.*.local
+
+# --- OS Specific Files ---
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# VS Code / Editors
+.vscode/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
