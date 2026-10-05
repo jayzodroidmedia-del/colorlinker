@@ -3253,15 +3253,15 @@ fun SplashScreen(selectedBackgroundSkin: BackgroundSkin, onTimeout: () -> Unit) 
                 )
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(14.dp))
 
-            // Brand Title Graphic Logo (Appnm-text.png)
+            // Brand Title Graphic Logo (Appnm-text.png) - Matched to Home Screen size (Moved 6.dp up)
             Image(
                 painter = painterResource(id = R.drawable.appnm_text),
                 contentDescription = "ColorLinker Title",
                 modifier = Modifier
-                    .width(260.dp)
-                    .height(85.dp),
+                    .width(280.dp)
+                    .height(106.dp),
                 contentScale = ContentScale.Fit
             )
 
@@ -3285,97 +3285,110 @@ fun SplashScreen(selectedBackgroundSkin: BackgroundSkin, onTimeout: () -> Unit) 
 
             Spacer(Modifier.height(34.dp))
 
-            // Ultra-Juicy Glossy Arcade Loading Progress Bar matching game aesthetic
+            // Premium 3D Arcade Cyber-Candy Loading Progress Bar UI
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Outer Capsule with 3D Golden Frame & Deep Glass Track
+                // Outer 3D Purple & Gold Capsule Frame
                 Box(
                     modifier = Modifier
-                        .width(270.dp)
-                        .height(24.dp)
-                        .shadow(elevation = 8.dp, shape = RoundedCornerShape(12.dp), ambientColor = Color.Black, spotColor = Color(0xFFFFD200))
+                        .width(290.dp)
+                        .height(28.dp)
+                        .shadow(
+                            elevation = 14.dp,
+                            shape = RoundedCornerShape(14.dp),
+                            ambientColor = Color(0xFF1E0B36),
+                            spotColor = Color(0xFFD946EF)
+                        )
                         .background(
                             brush = Brush.verticalGradient(
-                                colors = listOf(Color(0xDD0D1E36), Color(0xEE050E1C))
+                                colors = listOf(Color(0xFF240E43), Color(0xFF0F0420))
                             ),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(14.dp)
                         )
                         .border(
-                            width = 2.5.dp,
+                            width = 3.dp,
                             brush = Brush.verticalGradient(
-                                colors = listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
+                                colors = listOf(
+                                    Color(0xFFF0ABFC), // Soft Neon Lilac highlight
+                                    Color(0xFFA855F7), // Vivid Purple
+                                    Color(0xFF4C1D95)  // Deep Royal Violet shadow
+                                )
                             ),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(14.dp)
                         )
-                        .padding(3.dp)
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(Color(0x99020914))
+                        .padding(2.5.dp)
+                        .border(
+                            width = 1.2.dp,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFFFFEA79), // Bright Gold top bevel
+                                    Color(0xFFFFB703), // Warm Gold
+                                    Color(0xFF92400E)  // Dark Bronze bottom bevel
+                                )
+                            ),
+                            shape = RoundedCornerShape(11.5.dp)
+                        )
+                        .padding(2.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Color(0xFF0F051D), Color(0xFF06020D))
+                            )
+                        )
                 ) {
                     val currentProgress = progressAnim.coerceIn(0.04f, 1f)
                     
-                    // Progress Fill Container
+                    // Track Inner Subtle Grid / Glow
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color(0x22A855F7),
+                                        Color(0x11000000),
+                                        Color(0x22D946EF)
+                                    )
+                                )
+                            )
+                    )
+
+                    // Solid Progress Fill (No gradient)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(currentProgress)
                             .fillMaxHeight()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                Brush.horizontalGradient(
-                                    colors = listOf(
-                                        Color(0xFF00E5FF),
-                                        Color(0xFF0088FF),
-                                        Color(0xFFFF3366),
-                                        Color(0xFFFFB703),
-                                        Color(0xFFFFE600)
-                                    )
-                                )
-                            )
+                            .clip(RoundedCornerShape(9.dp))
+                            .background(Color(0xFFFFC800))
                     ) {
-                        // Top Glossy Glass Reflection
+                        // Top Cylindrical Glass Specular Highlight (3D bubble effect)
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .fillMaxHeight(0.48f)
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(
-                                            Color.White.copy(alpha = 0.65f),
-                                            Color.White.copy(alpha = 0.08f)
-                                        )
-                                    )
-                                )
+                                .fillMaxHeight(0.50f)
+                                .background(Color.White.copy(alpha = 0.35f))
                         )
 
-                        // Animated Shimmer Light Flare
+                        // Bottom Tube Shadow for 3D Convex Curvature
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(
-                                            Color.Transparent,
-                                            Color.White.copy(alpha = 0.45f),
-                                            Color.Transparent
-                                        ),
-                                        start = Offset(shimmerOffset * 400f, 0f),
-                                        end = Offset(shimmerOffset * 400f + 140f, 50f)
-                                    )
-                                )
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .fillMaxHeight(0.35f)
+                                .background(Color.Black.copy(alpha = 0.20f))
                         )
 
-                        // Leading Sparkle Dot at progress edge
-                        if (currentProgress > 0.08f) {
+                        // Leading Radiant Star / Energy Orb at the progress frontier
+                        if (currentProgress > 0.06f) {
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.CenterEnd)
                                     .padding(end = 2.dp)
-                                    .size(10.dp)
+                                    .size(14.dp)
                                     .background(
-                                        brush = Brush.radialGradient(
-                                            colors = listOf(Color.White, Color(0xFFFFE57F), Color.Transparent)
-                                        ),
+                                        color = Color.White,
                                         shape = CircleShape
                                     )
                             )
@@ -3383,26 +3396,54 @@ fun SplashScreen(selectedBackgroundSkin: BackgroundSkin, onTimeout: () -> Unit) 
                     }
                 }
 
-                // Loading Text with percentage & glowing dropshadow
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                // 3D Arcade Loading Badge / Pill Tag
+                Box(
+                    modifier = Modifier
+                        .shadow(elevation = 6.dp, shape = RoundedCornerShape(12.dp), spotColor = Color(0xFFFFD700))
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Color(0xFF2C114F), Color(0xFF16062A))
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .border(
+                            width = 1.5.dp,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Color(0xFFFFEA79), Color(0xFFFFB703), Color(0xFFD97706))
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 16.dp, vertical = 5.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Loading ${(progressAnim * 100).toInt()}%",
-                        color = Color(0xFFFFFAEB),
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = LuckiestGuyFontFamily,
-                        letterSpacing = 0.5.sp,
-                        style = TextStyle(
-                            shadow = Shadow(
-                                color = Color(0xFF061428),
-                                offset = Offset(2f, 3f),
-                                blurRadius = 4f
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "✨",
+                            fontSize = 12.sp
+                        )
+                        Text(
+                            text = "LOADING ${(progressAnim * 100).toInt()}%",
+                            color = Color(0xFFFFFAEB),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = LuckiestGuyFontFamily,
+                            letterSpacing = 1.sp,
+                            style = TextStyle(
+                                shadow = Shadow(
+                                    color = Color(0xFF05010B),
+                                    offset = Offset(2f, 3f),
+                                    blurRadius = 4f
+                                )
                             )
                         )
-                    )
+                        Text(
+                            text = "✨",
+                            fontSize = 12.sp
+                        )
+                    }
                 }
             }
         }
@@ -4569,7 +4610,8 @@ fun FloatingBubblesBackground(modifier: Modifier = Modifier) {
 
 @Composable
 fun HomeScreenActionButton(
-    icon: ImageVector,
+    icon: ImageVector? = null,
+    graphicResId: Int? = null,
     label: String,
     onClick: () -> Unit
 ) {
@@ -4606,55 +4648,67 @@ fun HomeScreenActionButton(
                 .size(width = 56.dp, height = 58.dp)
                 .bouncyClickable {
                     onClick()
-                }
+                },
+            contentAlignment = Alignment.Center
         ) {
-            // 3D Depth Underlay
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(depthColor, RoundedCornerShape(16.dp))
-            )
-
-            // Top Button Face
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-                    .align(Alignment.TopCenter)
-                    .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = faceGradient.first())
-                    .background(
-                        brush = Brush.verticalGradient(faceGradient),
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                    .border(
-                        width = 2.dp,
-                        brush = Brush.verticalGradient(borderColor),
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                    .clip(RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                // Top Gloss Highlight
+            if (graphicResId != null) {
+                Image(
+                    painter = painterResource(id = graphicResId),
+                    contentDescription = label,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                // 3D Depth Underlay
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.48f)
-                        .align(Alignment.TopCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.White.copy(alpha = 0.5f), Color.White.copy(alpha = 0.05f))
-                            )
-                        )
+                        .height(50.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(depthColor, RoundedCornerShape(16.dp))
                 )
 
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = Color.White,
-                    modifier = Modifier.size(26.dp)
-                )
+                // Top Button Face
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .align(Alignment.TopCenter)
+                        .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = faceGradient.first())
+                        .background(
+                            brush = Brush.verticalGradient(faceGradient),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .border(
+                            width = 2.dp,
+                            brush = Brush.verticalGradient(borderColor),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .clip(RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Top Gloss Highlight
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.48f)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.White.copy(alpha = 0.5f), Color.White.copy(alpha = 0.05f))
+                                )
+                            )
+                    )
+
+                    if (icon != null) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = label,
+                            tint = Color.White,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                }
             }
         }
 
@@ -4675,6 +4729,324 @@ fun HomeScreenActionButton(
                 )
             )
         )
+    }
+}
+
+@Composable
+fun HomeScreenAutoSolvingBoard(
+    modifier: Modifier = Modifier
+) {
+    // 6-second infinite loop for smooth auto-solving demonstration
+    val infiniteTransition = rememberInfiniteTransition(label = "homeBoardSolver")
+    val animTime by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 6000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "solveTimeProgress"
+    )
+
+    // Vibrant Glow Colors for 4 Flow Pairs (Red, Cyan, Purple, Green)
+    val redColor = Color(0xFFFF2A4B)
+    val cyanColor = Color(0xFF00E5FF)
+    val purpleColor = Color(0xFFD946EF)
+    val greenColor = Color(0xFF00E676)
+
+    // Path definitions across 4x4 matrix (row, col)
+    val redPath = listOf(0 to 0, 0 to 1, 1 to 1, 1 to 2)
+    val cyanPath = listOf(0 to 3, 1 to 3, 2 to 3)
+    val purplePath = listOf(1 to 0, 2 to 0, 3 to 0, 3 to 1)
+    val greenPath = listOf(2 to 1, 2 to 2, 3 to 2, 3 to 3)
+
+    // 8 Terminal End-Point Dots
+    val dots = listOf(
+        Triple(0, 0, redColor),
+        Triple(1, 2, redColor),
+        Triple(0, 3, cyanColor),
+        Triple(2, 3, cyanColor),
+        Triple(1, 0, purpleColor),
+        Triple(3, 1, purpleColor),
+        Triple(2, 1, greenColor),
+        Triple(3, 3, greenColor)
+    )
+
+    // Calculate progression for each path (0f..1f)
+    val redProgress = ((animTime - 0.5f) / 1.1f).coerceIn(0f, 1f)
+    val cyanProgress = ((animTime - 1.6f) / 0.9f).coerceIn(0f, 1f)
+    val purpleProgress = ((animTime - 2.5f) / 1.1f).coerceIn(0f, 1f)
+    val greenProgress = ((animTime - 3.6f) / 1.1f).coerceIn(0f, 1f)
+
+    // Master alpha for fading out at the end of the 6s loop before restart
+    val linesAlpha = if (animTime >= 5.4f) {
+        ((6.0f - animTime) / 0.6f).coerceIn(0f, 1f)
+    } else {
+        1f
+    }
+
+    // Glow pulse when fully solved (4.8s .. 5.4s)
+    val isSolved = animTime in 4.8f..5.4f
+    val glowPulse = if (isSolved) {
+        val frac = (animTime - 4.8f) / 0.6f
+        (kotlin.math.sin(frac * Math.PI.toFloat()) * 0.35f + 1f)
+    } else {
+        1f
+    }
+
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        // 1. 4x4 Grid Matrix of 16 Individual 3D Arcade Golden/Wooden Tiles (Matching All-screen-background.png)
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(3.5.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            for (r in 0 until 4) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(3.5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    for (c in 0 until 4) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .shadow(
+                                    elevation = 2.dp,
+                                    shape = RoundedCornerShape(8.dp),
+                                    spotColor = Color(0x6678350F)
+                                )
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color(0xFFFFF9E4),
+                                            Color(0xFFFDE7A4),
+                                            Color(0xFFF7CE6C),
+                                            Color(0xFFE9B341)
+                                        )
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .border(
+                                    width = 1.2.dp,
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color(0xFFFFFEE8),
+                                            Color(0xFFD49220)
+                                        )
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Inner Tile Recessed Socket
+                            Box(
+                                modifier = Modifier
+                                    .size(11.dp)
+                                    .background(
+                                        brush = Brush.radialGradient(
+                                            colors = listOf(
+                                                Color(0xFFB87614),
+                                                Color(0xFFDE9928)
+                                            )
+                                        ),
+                                        shape = CircleShape
+                                    )
+                                    .border(0.8.dp, Color(0x445C2C02), CircleShape)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Dynamic Connecting 3D Cylindrical Arcade Pipes & Glowing 3D Dots on top
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val totalSize = size.minDimension
+            val cellSize = totalSize / 4f
+
+            fun cellCenter(r: Int, c: Int): Offset {
+                return Offset((c + 0.5f) * cellSize, (r + 0.5f) * cellSize)
+            }
+
+            fun drawFlowPath(
+                points: List<Pair<Int, Int>>,
+                progress: Float,
+                color: Color
+            ) {
+                if (progress <= 0f || points.size < 2) return
+
+                val path = Path()
+                val totalSegments = points.size - 1
+                val currentDist = progress * totalSegments
+
+                val p0 = cellCenter(points[0].first, points[0].second)
+                path.moveTo(p0.x, p0.y)
+
+                var headOffset = p0
+
+                for (i in 0 until totalSegments) {
+                    val pStart = cellCenter(points[i].first, points[i].second)
+                    val pEnd = cellCenter(points[i + 1].first, points[i + 1].second)
+
+                    if (currentDist >= i + 1) {
+                        path.lineTo(pEnd.x, pEnd.y)
+                        headOffset = pEnd
+                    } else if (currentDist > i) {
+                        val frac = currentDist - i
+                        val currX = pStart.x + (pEnd.x - pStart.x) * frac
+                        val currY = pStart.y + (pEnd.y - pStart.y) * frac
+                        headOffset = Offset(currX, currY)
+                        path.lineTo(currX, currY)
+                        break
+                    }
+                }
+
+                val alpha = linesAlpha
+                val pipeThickness = cellSize * 0.28f * glowPulse
+
+                // 1. Ambient Drop Shadow (gives elevation over wooden tiles)
+                drawPath(
+                    path = path,
+                    color = Color(0x44000000 * alpha.toLong()),
+                    style = Stroke(
+                        width = pipeThickness + 3.dp.toPx(),
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+
+                // 2. Outer Soft Colored Glow / Bloom
+                drawPath(
+                    path = path,
+                    color = color.copy(alpha = 0.35f * alpha),
+                    style = Stroke(
+                        width = pipeThickness * 1.8f,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+
+                // 3. Dark Outer Pipe Bevel/Casing
+                drawPath(
+                    path = path,
+                    color = Color(0x55000000).copy(alpha = 0.4f * alpha),
+                    style = Stroke(
+                        width = pipeThickness + 1.6.dp.toPx(),
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+
+                // 4. Core Vibrant Saturated 3D Pipe Body
+                drawPath(
+                    path = path,
+                    color = color.copy(alpha = 0.98f * alpha),
+                    style = Stroke(
+                        width = pipeThickness,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+
+                // 5. Glossy Inner Specular Core (3D cylindrical tube reflection)
+                drawPath(
+                    path = path,
+                    color = Color.White.copy(alpha = 0.45f * alpha),
+                    style = Stroke(
+                        width = pipeThickness * 0.48f,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+
+                // 6. Top Crystal Ridge Highlight Beam
+                drawPath(
+                    path = path,
+                    color = Color.White.copy(alpha = 0.85f * alpha),
+                    style = Stroke(
+                        width = pipeThickness * 0.18f,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+
+                // 7. Dynamic Flowing Energy Orb at the Head of the line
+                if (progress < 1f && progress > 0f) {
+                    drawCircle(
+                        color = color.copy(alpha = 0.6f * alpha),
+                        radius = pipeThickness * 0.85f,
+                        center = headOffset
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.95f * alpha),
+                        radius = pipeThickness * 0.42f,
+                        center = headOffset
+                    )
+                }
+            }
+
+            // Draw the 4 flow paths in sequence
+            drawFlowPath(redPath, redProgress, redColor)
+            drawFlowPath(cyanPath, cyanProgress, cyanColor)
+            drawFlowPath(purplePath, purpleProgress, purpleColor)
+            drawFlowPath(greenPath, greenProgress, greenColor)
+
+            // 3. Draw 3D End-Point Puzzle Dots (Vibrant 3D Orbs)
+            val dotRadius = cellSize * 0.28f
+
+            dots.forEach { (r, c, col) ->
+                val center = cellCenter(r, c)
+
+                // Drop shadow
+                drawCircle(
+                    color = Color(0x66000000),
+                    radius = dotRadius,
+                    center = center + Offset(0f, 2.dp.toPx())
+                )
+
+                // Ambient Glow Ring
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(col.copy(alpha = 0.7f), Color.Transparent),
+                        center = center,
+                        radius = dotRadius * 1.6f
+                    ),
+                    radius = dotRadius * 1.6f,
+                    center = center
+                )
+
+                // 3D Sphere Shading
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.95f),
+                            col,
+                            col.copy(alpha = 0.85f),
+                            Color.Black.copy(alpha = 0.4f)
+                        ),
+                        center = center - Offset(dotRadius * 0.28f, dotRadius * 0.28f),
+                        radius = dotRadius
+                    ),
+                    radius = dotRadius,
+                    center = center
+                )
+
+                // Crisp Rim Border
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.85f),
+                    radius = dotRadius,
+                    center = center,
+                    style = Stroke(width = 1.3.dp.toPx())
+                )
+            }
+        }
     }
 }
 
@@ -4886,152 +5258,72 @@ fun HomeScreen(
 
             Spacer(Modifier.height(4.dp))
 
-            // Title Graphic Logo (Appnm-text.png)
+            // Title Graphic Logo (Appnm-text.png) - Static (+20.dp size)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(vertical = 16.dp)
+                modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)
             ) {
-                val titleTransition = rememberInfiniteTransition(label = "titleBounce")
-                val titleOffset by titleTransition.animateFloat(
-                    initialValue = -5f,
-                    targetValue = 5f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(1800, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "titleY"
-                )
-                val titleScale by titleTransition.animateFloat(
-                    initialValue = 0.97f,
-                    targetValue = 1.03f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(1800, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "titleScale"
-                )
-
                 Image(
                     painter = painterResource(id = R.drawable.appnm_text),
                     contentDescription = "ColorLinker Title",
                     modifier = Modifier
                         .width(280.dp)
-                        .height(95.dp)
-                        .offset(y = titleOffset.dp)
-                        .graphicsLayer {
-                            scaleX = titleScale
-                            scaleY = titleScale
-                        },
+                        .height(106.dp),
                     contentScale = ContentScale.Fit
                 )
             }
 
-            // 3D Juicy Arcade TAP TO PLAY Button
+            // Puzzle Board Graphic (Puzzle-Bord-Home.png) with 4x4 16-Tile Arcade Grid inside
             Box(
                 modifier = Modifier
-                    .width(270.dp)
-                    .height(68.dp)
+                    .padding(vertical = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(208.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Outer Board Frame (Puzzle-Bord-Home.png)
+                    Image(
+                        painter = painterResource(id = R.drawable.puzzle_board_home),
+                        contentDescription = "Puzzle Board",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+
+                    // 4x4 Grid Matrix (16 Individual 3D Arcade Golden/Wooden Tiles Matching Background) + Auto-Solving Demo
+                    HomeScreenAutoSolvingBoard(
+                        modifier = Modifier
+                            .size(164.dp)
+                            .padding(6.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(2.dp))
+
+            // 3D Juicy Arcade PLAY Button Graphic (btn_play_home.png)
+            Box(
+                modifier = Modifier
+                    .width(264.dp)
+                    .height(92.dp)
                     .graphicsLayer {
                         scaleX = playScale
                         scaleY = playScale
                     }
                     .zoomClickable {
                         onPlayClick()
-                    }
+                    },
+                contentAlignment = Alignment.Center
             ) {
-                // Bottom 3D Depth Shadow Lip
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(62.dp)
-                        .align(Alignment.BottomCenter)
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(Color(0xFF15803D), Color(0xFF052E16))
-                            ),
-                            shape = RoundedCornerShape(20.dp)
-                        )
+                Image(
+                    painter = painterResource(id = R.drawable.btn_play_home),
+                    contentDescription = "Play Button",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
                 )
-
-                // Top Floating Button Face
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp)
-                        .align(Alignment.TopCenter)
-                        .shadow(8.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF22C55E))
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    Color(0xFF4ADE80),
-                                    Color(0xFF22C55E),
-                                    Color(0xFF16A34A)
-                                )
-                            ),
-                            shape = RoundedCornerShape(20.dp)
-                        )
-                        .border(
-                            width = 2.5.dp,
-                            brush = Brush.verticalGradient(
-                                colors = listOf(Color(0xFFFEF08A), Color(0xFFFACC15), Color(0xFFCA8A04))
-                            ),
-                            shape = RoundedCornerShape(20.dp)
-                        )
-                        .clip(RoundedCornerShape(20.dp))
-                ) {
-                    // Top Glassy Highlight Sheen
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.48f)
-                            .align(Alignment.TopCenter)
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = 0.6f),
-                                        Color.White.copy(alpha = 0.08f)
-                                    )
-                                )
-                            )
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .background(Color.White.copy(alpha = 0.25f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "Play",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "TAP TO PLAY",
-                            color = Color.White,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Black,
-                            fontFamily = LuckiestGuyFontFamily,
-                            letterSpacing = 1.2.sp,
-                            style = TextStyle(
-                                shadow = Shadow(
-                                    color = Color(0xFF052E16),
-                                    offset = Offset(2f, 3f),
-                                    blurRadius = 4f
-                                )
-                            )
-                        )
-                    }
-                }
             }
 
             // Dynamic Home Banner Slider (Only renders when active banners are configured in Admin Panel)
@@ -5082,18 +5374,18 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Settings Button
+                // Settings Button (3D Graphic)
                 HomeScreenActionButton(
-                    icon = Icons.Default.Settings,
+                    graphicResId = R.drawable.btn_settings_home,
                     label = "Settings",
                     onClick = onSettingsClick
                 )
 
-                // Toggle: Agar tester banner visible hai toh Rewards button, warna Tester button
+                // Rewards / Tester Button (Right next to Settings)
                 if (isTesterBannerVisible) {
                     if (SettingsManager.isRewardsEnabled()) {
                         HomeScreenActionButton(
-                            icon = Icons.Default.Star,
+                            graphicResId = R.drawable.btn_rewards_home,
                             label = "Rewards",
                             onClick = onRewardsClick
                         )
@@ -5107,16 +5399,22 @@ fun HomeScreen(
                         )
                     } else if (SettingsManager.isRewardsEnabled()) {
                         HomeScreenActionButton(
-                            icon = Icons.Default.Star,
+                            graphicResId = R.drawable.btn_rewards_home,
+                            label = "Rewards",
+                            onClick = onRewardsClick
+                        )
+                    } else {
+                        HomeScreenActionButton(
+                            graphicResId = R.drawable.btn_rewards_home,
                             label = "Rewards",
                             onClick = onRewardsClick
                         )
                     }
                 }
 
-                // Rate Us Button
+                // Rate Us Button (3D Graphic)
                 HomeScreenActionButton(
-                    icon = Icons.Default.ThumbUp,
+                    graphicResId = R.drawable.btn_rateus_home,
                     label = "Rate Us",
                     onClick = {
                         val packageName = context.packageName
@@ -5139,9 +5437,9 @@ fun HomeScreen(
                     }
                 )
 
-                // Share Button
+                // Share Button (3D Graphic)
                 HomeScreenActionButton(
-                    icon = Icons.Default.Share,
+                    graphicResId = R.drawable.btn_share_home,
                     label = "Share",
                     onClick = {
                         val packageName = context.packageName
