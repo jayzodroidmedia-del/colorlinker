@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/config.php';
 
 // 1. Capture tracking parameters from GET request
@@ -10,7 +10,7 @@ $gaid         = $_GET['gaid'] ?? $_GET['gid'] ?? '';
 // 2. Validate essential parameters
 if (empty($offerId) || empty($rewardbroUid) || empty($eventId)) {
     // If tracking params are missing, fall back to direct Play Store redirect silently
-    header("Location: https://play.google.com/store/apps/details?id=com.colorlinker.puzzle");
+    header("Location: https://play.google.com/store/apps/details?id=com.pipecraze.puzzle");
     exit;
 }
 
@@ -59,9 +59,9 @@ try {
 
 // 5. Redirect user to Google Play Store to install the app
 if ($referrer) {
-    header("Location: https://play.google.com/store/apps/details?id=com.colorlinker.puzzle&referrer=referr%3D" . $referrer);
+    header("Location: https://play.google.com/store/apps/details?id=com.pipecraze.puzzle&referrer=referr%3D" . $referrer);
 } else {
-    header("Location: https://play.google.com/store/apps/details?id=com.colorlinker.puzzle");
+    header("Location: https://play.google.com/store/apps/details?id=com.pipecraze.puzzle");
 }
 exit;
 ?>

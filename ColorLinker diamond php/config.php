@@ -3,9 +3,9 @@
 
 // 1. Database Connection Details
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'colorlinker'); // Change this to your cPanel database name
-define('DB_USER', 'colorlinker');  // Change this to your cPanel database user
-define('DB_PASS', 'yDUYbIW8CfWg1eiK6MdQ');       // Change this to your cPanel database password
+define('DB_NAME', 'Colorlinker'); // cPanel database name
+define('DB_USER', 'Colorlinker'); // cPanel database user
+define('DB_PASS', 'iSccVutrAqVgX8i7xhYF'); // cPanel database password
 
 // 2. Security Configurations (Must match Kotlin client)
 define('HARDCODED_MAIN_KEY',      'sxguGsnhZ0qVHWWZuRscY0rBA23kxA4M');

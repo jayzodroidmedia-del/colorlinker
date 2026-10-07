@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 /**
- * ColorLinker - Dedicated Database Schema Installer & Migration Script
+ * Pipecraze - Dedicated Database Schema Installer & Migration Script
  * Run this file whenever you set up a new database or add new database features/tables.
  * Access via Browser: http://your-domain.com/install_db.php
  * Access via CLI: php install_db.php
@@ -332,12 +332,12 @@ try {
         ['postback_settings', 'coin', "INT DEFAULT 0"],
         ['postback_history', 'coin', "INT DEFAULT 0 AFTER response_body"],
         ['app_settings', 'rewards_enabled', "TINYINT(1) DEFAULT 1 AFTER update_status"],
-        ['app_settings', 'topon_app_id', "VARCHAR(100) NOT NULL DEFAULT 'h6abf939ee7d84'"],
-        ['app_settings', 'topon_app_key', "VARCHAR(100) NOT NULL DEFAULT 'a174dbc40be220647879d701c773493f7'"],
+        ['app_settings', 'topon_app_id', "VARCHAR(100) NOT NULL DEFAULT 'h6a6dcd470d298'"],
+        ['app_settings', 'topon_app_key', "VARCHAR(100) NOT NULL DEFAULT 'adc50c45a5db3969578a75b7843f78507'"],
         ['app_settings', 'topon_splash_id', "VARCHAR(100) NOT NULL DEFAULT 'b6a6dcd4790001'"],
-        ['app_settings', 'topon_interstitial_id', "VARCHAR(100) NOT NULL DEFAULT 'n6abf9442e8673'"],
-        ['app_settings', 'topon_rewarded_id', "VARCHAR(100) NOT NULL DEFAULT 'n6abf9427b3f3f'"],
-        ['app_settings', 'topon_native_id', "VARCHAR(100) NOT NULL DEFAULT 'n6abf93fa45aa7'"],
+        ['app_settings', 'topon_interstitial_id', "VARCHAR(100) NOT NULL DEFAULT 'b6a6dcd479a322'"],
+        ['app_settings', 'topon_rewarded_id', "VARCHAR(100) NOT NULL DEFAULT 'b6a6dcd479a999'"],
+        ['app_settings', 'topon_native_id', "VARCHAR(100) NOT NULL DEFAULT 'b6a6dcd479b111'"],
         ['app_settings', 'onesignal_app_id', "VARCHAR(255) NOT NULL DEFAULT ''"],
         ['app_settings', 'onesignal_rest_api_key', "TEXT NULL"],
         ['app_banners', 'description', "VARCHAR(255) NOT NULL DEFAULT '' AFTER title"],
@@ -416,7 +416,7 @@ try {
     if (intval($cntDays) === 0) {
         $pdo->exec("INSERT INTO tester_day_configs (day_number, required_levels, title, instructions, status) VALUES
             (1, 10, 'Day 1: Beginners Puzzle Test', 'Complete 10 levels and report any initial bugs.', 1),
-            (2, 10, 'Day 2: ColorLinker Mechanics Test', 'Complete 10 levels testing speed and touch responsiveness.', 1),
+            (2, 10, 'Day 2: Pipe Puzzle Mechanics Test', 'Complete 10 levels testing speed and touch responsiveness.', 1),
             (3, 10, 'Day 3: Combo Release Test', 'Complete 10 levels testing obstacle clearing.', 1),
             (4, 10, 'Day 4: Grid Untangle Test', 'Complete 10 levels testing large mazes.', 1),
             (5, 10, 'Day 5: Performance & Ad Flow', 'Complete 10 levels testing smooth transitions.', 1),
@@ -492,7 +492,7 @@ try {
 // Check if running from CLI
 if (php_sapi_name() === 'cli') {
     echo "====================================================\n";
-    echo " ColorLinker - Database Installer & Schema Migration  \n";
+    echo " Pipecraze - Database Installer & Schema Migration  \n";
     echo "====================================================\n";
     foreach ($results as $r) {
         $status = $r['success'] ? '[OK]' : '[ERROR]';
@@ -512,7 +512,7 @@ if (php_sapi_name() === 'cli') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ColorLinker • Database Migration & Setup</title>
+    <title>Pipecraze • Database Migration & Setup</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -631,7 +631,7 @@ if (php_sapi_name() === 'cli') {
             <div class="icon">🚀</div>
             <div class="title">
                 <h1>Database Migration & Setup</h1>
-                <p>ColorLinker Studio Schema Installer</p>
+                <p>Pipecraze Studio Schema Installer</p>
             </div>
             <?php if (empty($errors)): ?>
                 <div class="status-badge badge-success">✓ Up To Date</div>

@@ -858,7 +858,19 @@ fun ColorLinkerApp() {
                         onPlayClick = { 
                             showAdAndContinue("home_tap_to_play") {
                                 isTesterPlayMode = false
-                                currentScreen = AppScreen.LevelSelect 
+                                currentQuestionIndex = 0
+                                lives = 3
+                                restartTrigger++
+                                levelStartTrigger++
+                                currentScreen = AppScreen.Quiz
+                                isTutorialFromPause = false
+                                if (currentLevel == 1) {
+                                    isTimerPaused = true
+                                    activePopup = PopupType.Tutorial
+                                } else {
+                                    isTimerPaused = false
+                                    activePopup = PopupType.None
+                                }
                             }
                         },
                         onSettingsClick = { activePopup = PopupType.SoundSettings },
@@ -1001,34 +1013,22 @@ fun ColorLinkerApp() {
                     )
                 }
                 AppScreen.LevelSelect -> {
-                    BackHandler { currentScreen = AppScreen.Home }
-                    LevelSelectScreen(
-                        userLevel = currentLevel,
-                        stars = stars,
-                        coins = coins,
-                        unlockedLevels = unlockedLevels, completedLevels = completedLevels,
-                        selectedBackgroundSkin = selectedBackgroundSkin,
-                        onLevelClick = { level ->
-                            isTesterPlayMode = false
-                            currentLevel = level
-                            currentQuestionIndex = 0
-                            lives = 3
-                            restartTrigger++
-                            levelStartTrigger++
-                            currentScreen = AppScreen.Quiz
-                            isTutorialFromPause = false
-                            if (level == 1) {
-                                isTimerPaused = true
-                                activePopup = PopupType.Tutorial
-                            } else {
-                                isTimerPaused = false
-                                activePopup = PopupType.None
-                            }
-                        },
-                        onBack = { currentScreen = AppScreen.Home },
-                        onRewardClaim = { currentScreen = AppScreen.RewardCenter },
-                        claimedRewardLevels = claimedRewardLevels
-                    )
+                    LaunchedEffect(Unit) {
+                        isTesterPlayMode = false
+                        currentQuestionIndex = 0
+                        lives = 3
+                        restartTrigger++
+                        levelStartTrigger++
+                        currentScreen = AppScreen.Quiz
+                        isTutorialFromPause = false
+                        if (currentLevel == 1) {
+                            isTimerPaused = true
+                            activePopup = PopupType.Tutorial
+                        } else {
+                            isTimerPaused = false
+                            activePopup = PopupType.None
+                        }
+                    }
                 }
                 AppScreen.RewardCenter -> {
                     BackHandler { currentScreen = AppScreen.Home }
@@ -1059,7 +1059,7 @@ fun ColorLinkerApp() {
                 }
                 AppScreen.Quiz -> {
                     BackHandler { 
-                        currentScreen = if (isTesterPlayMode) AppScreen.TesterDashboard else AppScreen.LevelSelect
+                        currentScreen = if (isTesterPlayMode) AppScreen.TesterDashboard else AppScreen.Home
                         if (isTesterPlayMode) isTesterPlayMode = false
                     }
                     ArrowPuzzleScreen(
@@ -1070,7 +1070,7 @@ fun ColorLinkerApp() {
                         resumeTrigger = resumeTrigger,
                         selectedBackgroundSkin = selectedBackgroundSkin,
                         onBack = { 
-                            currentScreen = if (isTesterPlayMode) AppScreen.TesterDashboard else AppScreen.LevelSelect
+                            currentScreen = if (isTesterPlayMode) AppScreen.TesterDashboard else AppScreen.Home
                             if (isTesterPlayMode) isTesterPlayMode = false
                         },
                         onPauseClick = {
@@ -1136,11 +1136,11 @@ fun ColorLinkerApp() {
                     )
                     PopupType.Wrong -> WrongAnswerPopup(
                         onRetry = { activePopup = PopupType.None; isTimerPaused = false; restartTrigger++ },
-                        onBack = { activePopup = PopupType.None; currentScreen = AppScreen.LevelSelect }
+                        onBack = { activePopup = PopupType.None; currentScreen = AppScreen.Home }
                     )
                     PopupType.TimeOut -> TimeOutPopup(
                         onRetry = { activePopup = PopupType.None; isTimerPaused = false; restartTrigger++ },
-                        onBack = { activePopup = PopupType.None; currentScreen = AppScreen.LevelSelect }
+                        onBack = { activePopup = PopupType.None; currentScreen = AppScreen.Home }
                     )
                     PopupType.GameOver -> {
                         GameOverPopup(
@@ -1168,7 +1168,7 @@ fun ColorLinkerApp() {
                             },
                             onBack = { 
                                 activePopup = PopupType.None
-                                currentScreen = if (isTesterPlayMode) AppScreen.TesterDashboard else AppScreen.LevelSelect
+                                currentScreen = if (isTesterPlayMode) AppScreen.TesterDashboard else AppScreen.Home
                                 if (isTesterPlayMode) isTesterPlayMode = false
                             }
                         )
@@ -1189,7 +1189,7 @@ fun ColorLinkerApp() {
                         },
                         onQuit = { 
                             activePopup = PopupType.None
-                            currentScreen = if (isTesterPlayMode) AppScreen.TesterDashboard else AppScreen.LevelSelect
+                            currentScreen = if (isTesterPlayMode) AppScreen.TesterDashboard else AppScreen.Home
                             if (isTesterPlayMode) isTesterPlayMode = false
                         }
                     )
@@ -1250,7 +1250,7 @@ fun ColorLinkerApp() {
                             onHome = { 
                                 activePopup = PopupType.None
                                 isTimerPaused = false
-                                currentScreen = if (isTesterPlayMode) AppScreen.TesterDashboard else AppScreen.LevelSelect
+                                currentScreen = if (isTesterPlayMode) AppScreen.TesterDashboard else AppScreen.Home
                                 if (isTesterPlayMode) isTesterPlayMode = false
                             },
                             onRestart = {
@@ -1308,8 +1308,9 @@ fun ColorLinkerApp() {
                                         currentScreen = AppScreen.Home
                                     }
                                 } else {
-                                    val installTask = SettingsManager.getInstallTaskForLevel(currentLevel)
-                                    if (installTask != null) {
+                                    val installTask = SettingsManager.getInstallTaskForLevel(nextLvl)
+                                    val isTaskDone = if (installTask != null) prefs.getBoolean("install_task_done_${installTask.level}", false) else true
+                                    if (installTask != null && !isTaskDone) {
                                         pendingInstallTask = installTask
                                         activePopup = PopupType.None
                                         showImportantTaskPopup = true
@@ -1472,54 +1473,45 @@ fun ColorLinkerApp() {
         }
 
         if (showImportantTaskPopup && pendingInstallTask != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clickable(enabled = false) {}
-            ) {
-                ImportantTaskPopup(
-                    requiredMb = pendingInstallTask!!.requiredMb,
-                    onInstallClick = {
-                        val storageBefore = getFreeInternalStorageMB()
-                        prefs.edit()
-                            .putBoolean("install_task_active", true)
-                            .putLong("install_task_storage_before", storageBefore)
-                            .putInt("install_task_required_mb", pendingInstallTask!!.requiredMb)
-                            .putInt("install_task_level", currentLevel)
-                            .apply()
-                        
-                        val adType = SettingsManager.getAdTypeForScreen("UnlockLevel")
-                        val activity = context as Activity
-                        if (adType == "rewarded") {
-                            AdManager.showRewardedAd(activity, {}, {})
-                        } else if (adType == "interstitial") {
-                            AdManager.showInterstitialAd(activity) {}
-                        }
-                        showImportantTaskPopup = false
-                    },
-                    onCancel = {
-                        showImportantTaskPopup = false
-                        activePopup = PopupType.None
-                        currentScreen = AppScreen.LevelSelect
+            ImportantTaskPopup(
+                requiredMb = pendingInstallTask!!.requiredMb,
+                onInstallClick = {
+                    val storageBefore = getFreeInternalStorageMB()
+                    val taskLvl = pendingInstallTask?.level ?: currentLevel
+                    val reqMb = pendingInstallTask?.requiredMb ?: 10
+                    prefs.edit()
+                        .putBoolean("install_task_active", true)
+                        .putLong("install_task_storage_before", storageBefore)
+                        .putInt("install_task_required_mb", reqMb)
+                        .putInt("install_task_level", taskLvl)
+                        .apply()
+                    
+                    val adType = SettingsManager.getAdTypeForScreen("UnlockLevel")
+                    val activity = context as Activity
+                    if (adType == "rewarded") {
+                        AdManager.showRewardedAd(activity, {}, {})
+                    } else {
+                        AdManager.showInterstitialAd(activity) {}
                     }
-                )
-            }
+                    showImportantTaskPopup = false
+                },
+                onCancel = {
+                    showImportantTaskPopup = false
+                    activePopup = PopupType.None
+                    currentScreen = AppScreen.Home
+                }
+            )
         }
 
         if (showTaskFailedPopup && pendingInstallTask != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clickable(enabled = false) {}
-            ) {
-                TaskFailedPopup(
-                    requiredMb = pendingInstallTask!!.requiredMb,
-                    onOkay = {
-                        showTaskFailedPopup = false
-                        activePopup = PopupType.LevelComplete
-                    }
-                )
-            }
+            TaskFailedPopup(
+                requiredMb = pendingInstallTask!!.requiredMb,
+                onOkay = {
+                    showTaskFailedPopup = false
+                    activePopup = PopupType.None
+                    currentScreen = AppScreen.Home
+                }
+            )
         }
 
         if (isLoadingAd) {
@@ -3516,242 +3508,354 @@ fun UpdateScreen(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .offset(y = 5.dp)
-                        .background(Color(0xFF140526), RoundedCornerShape(26.dp))
+                        .offset(y = 6.dp)
+                        .background(Color(0xFF130424), RoundedCornerShape(28.dp))
                 )
 
-                // Main Card Surface (Soft Purple)
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                // 3D Extrusion Bevel Edge
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .offset(y = 3.5.dp)
+                        .background(
+                            Brush.verticalGradient(listOf(Color(0xFF9333EA), Color(0xFF581C87))),
+                            RoundedCornerShape(28.dp)
+                        )
+                )
+
+                // Main Card Surface
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
                             brush = Brush.verticalGradient(
-                                listOf(Color(0xF03B1E68), Color(0xF0220E40))
+                                listOf(Color(0xFF381568), Color(0xFF230C44), Color(0xFF16052E))
                             ),
-                            shape = RoundedCornerShape(26.dp)
+                            shape = RoundedCornerShape(28.dp)
                         )
                         .border(
-                            width = 3.5.dp,
-                            brush = Brush.horizontalGradient(
-                                listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
+                            width = 3.dp,
+                            brush = Brush.verticalGradient(
+                                listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
                             ),
-                            shape = RoundedCornerShape(26.dp)
+                            shape = RoundedCornerShape(28.dp)
                         )
-                        .padding(horizontal = 20.dp, vertical = 24.dp)
+                        .clip(RoundedCornerShape(28.dp))
                 ) {
-                    // Logo / App Icon Badge
+                    // Top Gloss Sheen Reflection
                     Box(
                         modifier = Modifier
-                            .size(92.dp)
-                            .scale(scale)
-                            .background(Color(0x99180730), RoundedCornerShape(22.dp))
-                            .border(
-                                2.dp,
-                                Brush.horizontalGradient(
-                                    listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                                ),
-                                RoundedCornerShape(22.dp)
+                            .fillMaxWidth()
+                            .height(75.dp)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)
+                                )
                             )
-                            .padding(10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.logo_image),
-                            contentDescription = "Logo",
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    Spacer(Modifier.height(16.dp))
-
-                    // Title
-                    Text(
-                        text = "UPDATE REQUIRED!",
-                        style = TextStyle(
-                            color = Color.White,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Black,
-                            fontFamily = LuckiestGuyFontFamily,
-                            letterSpacing = 0.5.sp,
-                            shadow = Shadow(
-                                color = Color(0xFF0F172A),
-                                offset = Offset(2f, 3f),
-                                blurRadius = 4f
-                            )
-                        ),
-                        textAlign = TextAlign.Center
                     )
 
-                    Spacer(Modifier.height(8.dp))
-
-                    Text(
-                        text = "A new version of ColorLinker Puzzle is available with new levels & improvements. Please update to continue playing!",
-                        color = Color(0xFF94A3B8),
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 19.sp
-                    )
-
-                    Spacer(Modifier.height(20.dp))
-
-                    // Version Comparison Card (Dark Glass)
-                    Row(
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xCC0B0F19), RoundedCornerShape(18.dp))
-                            .border(
-                                1.5.dp,
-                                Color(0xFFFFB300).copy(alpha = 0.4f),
-                                RoundedCornerShape(18.dp)
-                            )
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(horizontal = 20.dp, vertical = 24.dp)
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "CURRENT",
-                                color = Color(0xFF94A3B8),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = LuckiestGuyFontFamily
+                        // Logo / App Icon Badge
+                        Box(
+                            modifier = Modifier
+                                .size(92.dp)
+                                .scale(scale)
+                                .background(Color(0x99180730), RoundedCornerShape(22.dp))
+                                .border(
+                                    2.dp,
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                                    ),
+                                    RoundedCornerShape(22.dp)
+                                )
+                                .padding(10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.logo_image),
+                                contentDescription = "Logo",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
                             )
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                text = "v$currentVersion",
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // Title
+                        Text(
+                            text = "UPDATE REQUIRED!",
+                            style = TextStyle(
                                 color = Color.White,
-                                fontSize = 16.sp,
+                                fontSize = 24.sp,
                                 fontWeight = FontWeight.Black,
-                                fontFamily = LuckiestGuyFontFamily
-                            )
-                        }
-
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            tint = Color(0xFFFFB300),
-                            modifier = Modifier.size(24.dp)
+                                fontFamily = LuckiestGuyFontFamily,
+                                letterSpacing = 0.5.sp,
+                                shadow = Shadow(
+                                    color = Color(0xFF0F172A),
+                                    offset = Offset(2f, 3f),
+                                    blurRadius = 4f
+                                )
+                            ),
+                            textAlign = TextAlign.Center
                         )
 
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "NEW VERSION",
-                                color = Color(0xFF4ADE80),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = LuckiestGuyFontFamily
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            text = "A new version of ColorLinker Puzzle is available with new levels & improvements. Please update to continue playing!",
+                            color = Color(0xFFCBD5E1),
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 19.sp
+                        )
+
+                        Spacer(Modifier.height(20.dp))
+
+                        // Version Comparison Card (Dark Glass with Purple Gradient Border)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xCC150729), RoundedCornerShape(18.dp))
+                                .border(
+                                    1.5.dp,
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                                    ),
+                                    RoundedCornerShape(18.dp)
+                                )
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "CURRENT",
+                                    color = Color(0xFFD8B4FE),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = LuckiestGuyFontFamily,
+                                    letterSpacing = 0.5.sp
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = "v$currentVersion",
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Black,
+                                    fontFamily = LuckiestGuyFontFamily
+                                )
+                            }
+
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = Color(0xFFFFD54F),
+                                modifier = Modifier.size(24.dp)
                             )
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                text = "v$newVersion",
-                                color = Color(0xFF4ADE80),
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Black,
-                                fontFamily = LuckiestGuyFontFamily
-                            )
+
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "NEW VERSION",
+                                    color = Color(0xFF4ADE80),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = LuckiestGuyFontFamily,
+                                    letterSpacing = 0.5.sp
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = "v$newVersion",
+                                    color = Color(0xFF4ADE80),
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Black,
+                                    fontFamily = LuckiestGuyFontFamily
+                                )
+                            }
                         }
-                    }
 
-                    Spacer(Modifier.height(24.dp))
+                        Spacer(Modifier.height(24.dp))
 
-                    // UPDATE NOW Button (3D Emerald Green)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .zoomClickable {
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl))
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    android.util.Log.e("UpdateScreen", "Error launching update URL: ", e)
+                        // UPDATE NOW Button (3D Emerald Green Hero Button with Purple Gradient Border)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp)
+                                .zoomClickable {
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl))
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("UpdateScreen", "Error launching update URL: ", e)
+                                    }
+                                    (context as? Activity)?.finishAffinity()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Bottom Depth Shadow Underlay
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 4.5.dp)
+                                    .background(Color(0xFF042F2C), RoundedCornerShape(18.dp))
+                            )
+                            // 3D Extrusion Bevel Edge
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 2.dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color(0xFF059669), Color(0xFF064E3B))),
+                                        RoundedCornerShape(18.dp)
+                                    )
+                            )
+                            // Main Shiny Surface
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color(0xFF34D399), Color(0xFF10B981), Color(0xFF047857))
+                                        ),
+                                        shape = RoundedCornerShape(18.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                                        ),
+                                        shape = RoundedCornerShape(18.dp)
+                                    )
+                                    .clip(RoundedCornerShape(18.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                // Top Glossy Light Sheen
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(0.48f)
+                                        .align(Alignment.TopCenter)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                            )
+                                        )
+                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CloudDownload,
+                                        contentDescription = "Update Now",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Text(
+                                        text = "UPDATE NOW",
+                                        color = Color.White,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Black,
+                                        fontFamily = LuckiestGuyFontFamily,
+                                        letterSpacing = 0.8.sp,
+                                        style = TextStyle(
+                                            shadow = Shadow(Color(0xFF022C22), Offset(1f, 2f), 2f)
+                                        )
+                                    )
                                 }
-                                (context as? Activity)?.finishAffinity()
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .offset(y = 3.dp)
-                                .background(Color(0xFF064E3B), RoundedCornerShape(16.dp))
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(Color(0xFF4ADE80), Color(0xFF16A34A))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    brush = Brush.horizontalGradient(
-                                        listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "UPDATE NOW",
-                                color = Color.White,
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Black,
-                                fontFamily = LuckiestGuyFontFamily,
-                                letterSpacing = 1.sp
-                            )
+                            }
                         }
-                    }
 
-                    Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(12.dp))
 
-                    // EXIT APP Button (3D Crimson Red)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .zoomClickable {
-                                onBack()
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
+                        // EXIT APP Button (3D Crimson Red with Purple Gradient Border)
                         Box(
                             modifier = Modifier
-                                .matchParentSize()
-                                .offset(y = 3.dp)
-                                .background(Color(0xFF7F1D1D), RoundedCornerShape(16.dp))
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(Color(0xFFEF4444), Color(0xFFDC2626))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    brush = Brush.horizontalGradient(
-                                        listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                ),
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .zoomClickable {
+                                    onBack()
+                                },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "EXIT APP",
-                                color = Color.White,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Black,
-                                fontFamily = LuckiestGuyFontFamily,
-                                letterSpacing = 0.8.sp
+                            // Bottom Depth Shadow Underlay
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 3.5.dp)
+                                    .background(Color(0xFF450A0A), RoundedCornerShape(16.dp))
                             )
+                            // 3D Extrusion Bevel Edge
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 1.5.dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color(0xFFDC2626), Color(0xFF991B1B))),
+                                        RoundedCornerShape(16.dp)
+                                    )
+                            )
+                            // Main Shiny Surface
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color(0xFFF87171), Color(0xFFEF4444), Color(0xFFB91C1C))
+                                        ),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                                        ),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .clip(RoundedCornerShape(16.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                // Top Glossy Light Sheen
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(0.48f)
+                                        .align(Alignment.TopCenter)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                            )
+                                        )
+                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Exit App",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = "EXIT APP",
+                                        color = Color.White,
+                                        fontSize = 14.5.sp,
+                                        fontWeight = FontWeight.Black,
+                                        fontFamily = LuckiestGuyFontFamily,
+                                        letterSpacing = 0.5.sp,
+                                        style = TextStyle(
+                                            shadow = Shadow(Color(0xFF450A0A), Offset(1f, 2f), 2f)
+                                        )
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -12316,7 +12420,7 @@ fun ConfettiCanvas(particlesProvider: () -> List<ConfettiParticle>) {
 
 
 // ==========================================
-// PUZZLE BOARD (Home Screen 1:1 White Card)
+// PUZZLE BOARD (3D Cosmic Arcade Frame)
 // ==========================================
 @Composable
 fun PuzzleBoard(
@@ -12335,52 +12439,91 @@ fun PuzzleBoard(
             .aspectRatio(1f),
         contentAlignment = Alignment.Center
     ) {
-        // 3D Bottom Depth Shadow Layer (Deep Slate / Obsidian Depth)
+        // 1. 3D Bottom Depth Shadow Underlay (Deep Obsidian/Purple Base)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .offset(y = 5.dp)
+                .offset(y = 6.dp)
                 .background(
-                    color = Color(0xFF080D1A),
-                    shape = RoundedCornerShape(26.dp)
+                    color = Color(0xFF130424),
+                    shape = RoundedCornerShape(28.dp)
                 )
         )
 
-        // Outer Arcade Frame (Deep Midnight Glass with Luxury Gold Border)
+        // 2. 3D Extrusion Bevel Edge
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .shadow(
-                    elevation = 8.dp,
-                    shape = RoundedCornerShape(26.dp),
-                    spotColor = Color(0x55000000)
-                )
+                .offset(y = 3.dp)
                 .background(
-                    color = Color(0xEE0F172A),
-                    shape = RoundedCornerShape(26.dp)
+                    brush = Brush.verticalGradient(
+                        listOf(Color(0xFF9333EA), Color(0xFF581C87))
+                    ),
+                    shape = RoundedCornerShape(28.dp)
+                )
+        )
+
+        // 3. Outer Arcade Frame (Royal Purple Gradient + Multi-Tone Bevel Border + Top Gloss Sheen)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color(0xFF2E1052),
+                            Color(0xFF1F0B38),
+                            Color(0xFF130424)
+                        )
+                    ),
+                    shape = RoundedCornerShape(28.dp)
                 )
                 .border(
-                    width = 3.5.dp,
-                    brush = Brush.horizontalGradient(
-                        listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
+                    width = 3.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color(0xFFF5D0FE),
+                            Color(0xFFE879F9),
+                            Color(0xFFC026D3),
+                            Color(0xFF7E22CE)
+                        )
                     ),
-                    shape = RoundedCornerShape(26.dp)
-                ),
+                    shape = RoundedCornerShape(28.dp)
+                )
+                .clip(RoundedCornerShape(28.dp)),
             contentAlignment = Alignment.Center
         ) {
-            // Inner Game Board Surface
+            // Upper Half Glass Gloss Sheen
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.35f)
+                    .align(Alignment.TopCenter)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)
+                        )
+                    )
+            )
+
+            // Inner Game Board Bed (Deep Contrast Slot)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(8.dp)
                     .background(
-                        color = Color(0xAA0B0F19),
-                        shape = RoundedCornerShape(20.dp)
+                        color = Color(0xEE110422),
+                        shape = RoundedCornerShape(22.dp)
                     )
                     .border(
-                        width = 1.dp,
-                        color = Color(0xFF334155).copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(20.dp)
+                        width = 1.5.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                Color(0x66C084FC),
+                                Color(0x337E22CE),
+                                Color(0x223B0764)
+                            )
+                        ),
+                        shape = RoundedCornerShape(22.dp)
                     )
                     .padding(6.dp),
                 contentAlignment = Alignment.Center
@@ -13352,43 +13495,62 @@ fun FullScreenPopupContainer(
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .offset(y = 5.dp)
-                    .background(Color(0xFF1E053A), RoundedCornerShape(26.dp))
+                    .offset(y = 6.dp)
+                    .background(Color(0xFF130424), RoundedCornerShape(28.dp))
             )
             // 3D Extrusion Bevel Edge
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .offset(y = 3.dp)
+                    .offset(y = 3.5.dp)
                     .background(
                         Brush.verticalGradient(listOf(Color(0xFF9333EA), Color(0xFF581C87))),
-                        RoundedCornerShape(26.dp)
+                        RoundedCornerShape(28.dp)
                     )
             )
 
             // Main Card Surface
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight()
                     .background(
                         brush = Brush.verticalGradient(
-                            listOf(Color(0xF03B1E68), Color(0xF0220E40))
+                            listOf(Color(0xFF381568), Color(0xFF230C44), Color(0xFF16052E))
                         ),
-                        shape = RoundedCornerShape(26.dp)
+                        shape = RoundedCornerShape(28.dp)
                     )
                     .border(
                         width = 3.dp,
                         brush = Brush.verticalGradient(
                             listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
                         ),
-                        shape = RoundedCornerShape(26.dp)
+                        shape = RoundedCornerShape(28.dp)
                     )
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 22.dp)
+                    .clip(RoundedCornerShape(28.dp))
             ) {
-                content()
+                // Top Gloss Sheen Reflection
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(75.dp)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)
+                            )
+                        )
+                )
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 22.dp)
+                ) {
+                    content()
+                }
             }
         }
     }
@@ -13687,7 +13849,7 @@ fun GameOverPopup(score: Int, onWatchAd: () -> Unit, onRestart: () -> Unit, onBa
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.75f))
             .clickable(enabled = false) {}
-            .padding(horizontal = 18.dp, vertical = 20.dp),
+            .padding(horizontal = 16.dp, vertical = 20.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
@@ -13700,298 +13862,419 @@ fun GameOverPopup(score: Int, onWatchAd: () -> Unit, onRestart: () -> Unit, onBa
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .offset(y = 5.dp)
-                    .background(Color(0xFF1E053A), RoundedCornerShape(26.dp))
+                    .offset(y = 6.dp)
+                    .background(Color(0xFF130424), RoundedCornerShape(28.dp))
             )
             // 3D Extrusion Bevel Edge
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .offset(y = 3.dp)
+                    .offset(y = 3.5.dp)
                     .background(
                         Brush.verticalGradient(listOf(Color(0xFF9333EA), Color(0xFF581C87))),
-                        RoundedCornerShape(26.dp)
+                        RoundedCornerShape(28.dp)
                     )
             )
 
-            // Main Popup Surface (Soft Purple)
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
+            // Main Popup Surface
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
                         brush = Brush.verticalGradient(
-                            listOf(Color(0xF03B1E68), Color(0xF0220E40))
+                            listOf(Color(0xFF381568), Color(0xFF230C44), Color(0xFF16052E))
                         ),
-                        shape = RoundedCornerShape(26.dp)
+                        shape = RoundedCornerShape(28.dp)
                     )
                     .border(
                         width = 3.dp,
                         brush = Brush.verticalGradient(
                             listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
                         ),
-                        shape = RoundedCornerShape(26.dp)
+                        shape = RoundedCornerShape(28.dp)
                     )
-                    .padding(horizontal = 18.dp, vertical = 20.dp)
+                    .clip(RoundedCornerShape(28.dp))
             ) {
-                // Header Row: OUT OF LIVES! (Left) and Close Button (Right)
-                Row(
+                // Top Gloss Sheen
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = "Lives",
-                            tint = Color(0xFFEF4444),
-                            modifier = Modifier.size(24.dp)
+                        .height(75.dp)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)
+                            )
                         )
-                        Text(
-                            text = "OUT OF LIVES!",
-                            style = TextStyle(
-                                color = Color.White,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Black,
-                                fontFamily = LuckiestGuyFontFamily,
-                                shadow = Shadow(
-                                    color = Color(0xFF0F172A),
-                                    offset = Offset(2f, 3f),
-                                    blurRadius = 4f
+                )
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 20.dp)
+                ) {
+                    // Header Row: OUT OF LIVES! (Left) and Close Button (Right)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Favorite,
+                                contentDescription = "Lives",
+                                tint = Color(0xFFEF4444),
+                                modifier = Modifier.size(26.dp)
+                            )
+                            Text(
+                                text = "OUT OF LIVES!",
+                                style = TextStyle(
+                                    color = Color.White,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Black,
+                                    fontFamily = LuckiestGuyFontFamily,
+                                    shadow = Shadow(
+                                        color = Color(0xFF0F021F),
+                                        offset = Offset(2f, 3f),
+                                        blurRadius = 4f
+                                    )
                                 )
                             )
+                        }
+
+                        // 3D Close Button
+                        Image(
+                            painter = painterResource(id = R.drawable.btn_game_close),
+                            contentDescription = "Close",
+                            modifier = Modifier
+                                .width(44.dp)
+                                .height(45.dp)
+                                .bouncyClickable { onBack() },
+                            contentScale = ContentScale.Fit
                         )
                     }
 
-                    // 3D Close Button
-                    Image(
-                        painter = painterResource(id = R.drawable.btn_game_close),
-                        contentDescription = "Close",
+                    // Central Splash Logo with Pendulum Swing Animation
+                    Box(
                         modifier = Modifier
-                            .size(42.dp)
-                            .bouncyClickable { onBack() },
-                        contentScale = ContentScale.Fit
-                    )
-                }
+                            .size(105.dp)
+                            .graphicsLayer {
+                                transformOrigin = TransformOrigin(0.5f, 0.05f)
+                                rotationZ = pendulumAngle
+                            }
+                            .padding(vertical = 2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.splash_logo),
+                            contentDescription = "Splash Logo",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                    
+                    Spacer(Modifier.height(4.dp))
 
-                // Central Splash Logo with Pendulum Swing Animation
-                Box(
-                    modifier = Modifier
-                        .size(110.dp)
-                        .graphicsLayer {
-                            transformOrigin = TransformOrigin(0.5f, 0.05f) // Top pivot for pendulum swing
-                            rotationZ = pendulumAngle
-                        }
-                        .padding(vertical = 2.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.splash_logo),
-                        contentDescription = "Splash Logo",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit
+                    Text(
+                        text = "Don't Give Up!",
+                        color = Color(0xFFFFD54F),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black,
+                        fontFamily = LuckiestGuyFontFamily,
+                        textAlign = TextAlign.Center,
+                        style = TextStyle(
+                            shadow = Shadow(Color(0xFF0F021F), Offset(2f, 2f), 3f)
+                        )
                     )
-                }
-                
-                Spacer(Modifier.height(4.dp))
+                    
+                    Spacer(Modifier.height(6.dp))
 
-                Text(
-                    text = "Don't Give Up!",
-                    color = Color(0xFFFFEA79),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Black,
-                    fontFamily = LuckiestGuyFontFamily,
-                    textAlign = TextAlign.Center
-                )
-                
-                Text(
-                    text = "Watch a quick video to get +3 Extra Lives and continue solving, or restart the puzzle.",
-                    color = Color(0xFF94A3B8),
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
-                )
-                
-                Spacer(Modifier.height(14.dp))
-                
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // 1. WATCH AD FOR +3 LIVES (3D Emerald Green Button)
+                    // Info Card
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(54.dp)
-                            .zoomClickable { onWatchAd() },
+                            .background(Color(0x55150529), RoundedCornerShape(14.dp))
+                            .border(1.dp, Color(0x33C084FC), RoundedCornerShape(14.dp))
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .offset(y = 3.dp)
-                                .background(Color(0xFF064E3B), RoundedCornerShape(16.dp))
+                        Text(
+                            text = "Watch a quick video to get +3 Extra Lives and continue solving, or restart the puzzle.",
+                            color = Color(0xFFE9D5FF),
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 17.sp
                         )
+                    }
+                    
+                    Spacer(Modifier.height(14.dp))
+                    
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // 1. WATCH AD FOR +3 LIVES (3D Emerald Green Button with Purple Gradient Border)
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(Color(0xFF4ADE80), Color(0xFF16A34A))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                )
-                                .border(
-                                    width = 2.5.dp,
-                                    brush = Brush.horizontalGradient(
-                                        listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                ),
+                                .fillMaxWidth()
+                                .height(54.dp)
+                                .zoomClickable { onWatchAd() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
+                            // Bottom Depth Shadow Underlay
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 4.dp)
+                                    .background(Color(0xFF042F2C), RoundedCornerShape(18.dp))
+                            )
+                            // 3D Extrusion Bevel Edge
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 2.dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color(0xFF059669), Color(0xFF064E3B))),
+                                        RoundedCornerShape(18.dp)
+                                    )
+                            )
+                            // Main Shiny Surface
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color(0xFF34D399), Color(0xFF10B981), Color(0xFF047857))
+                                        ),
+                                        shape = RoundedCornerShape(18.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFD1FAE5), Color(0xFF6EE7B7), Color(0xFF10B981), Color(0xFF047857))
+                                        ),
+                                        shape = RoundedCornerShape(18.dp)
+                                    )
+                                    .clip(RoundedCornerShape(18.dp)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = "FREE Ad",
-                                    color = Color(0xFFFEF08A),
-                                    fontSize = 10.5.sp,
-                                    fontWeight = FontWeight.Black,
-                                    fontFamily = LuckiestGuyFontFamily,
-                                    letterSpacing = 0.5.sp
+                                // Top Glossy Light Sheen
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(0.48f)
+                                        .align(Alignment.TopCenter)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                            )
+                                        )
+                                )
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = "FREE Ad",
+                                        color = Color(0xFFFEF08A),
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.Black,
+                                        fontFamily = LuckiestGuyFontFamily,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PlayArrow,
+                                            contentDescription = "Watch Ad",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Text(
+                                            text = "RESUME (+3 LIVES)",
+                                            color = Color.White,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Black,
+                                            fontFamily = LuckiestGuyFontFamily,
+                                            style = TextStyle(
+                                                shadow = Shadow(Color(0xFF022C22), Offset(1f, 2f), 2f)
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // 2. RESTART Button (3D Warm Orange with Purple Gradient Border)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .zoomClickable { onRestart() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Bottom Depth Shadow Underlay
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 3.5.dp)
+                                    .background(Color(0xFF7C2D12), RoundedCornerShape(16.dp))
+                            )
+                            // 3D Extrusion Bevel Edge
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 1.5.dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color(0xFFEA580C), Color(0xFF9A3412))),
+                                        RoundedCornerShape(16.dp)
+                                    )
+                            )
+                            // Main Shiny Surface
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color(0xFFFB923C), Color(0xFFEA580C), Color(0xFFC2410C))
+                                        ),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFFFEDD5), Color(0xFFFDBA74), Color(0xFFFB923C), Color(0xFFC2410C))
+                                        ),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .clip(RoundedCornerShape(16.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                // Top Glossy Light Sheen
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(0.48f)
+                                        .align(Alignment.TopCenter)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                            )
+                                        )
                                 )
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.PlayArrow,
-                                        contentDescription = "Watch Ad",
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "Restart",
                                         tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(18.dp)
                                     )
                                     Text(
-                                        text = "RESUME (+3 LIVES)",
+                                        text = "RESTART LEVEL",
                                         color = Color.White,
-                                        fontSize = 15.sp,
+                                        fontSize = 14.5.sp,
                                         fontWeight = FontWeight.Black,
-                                        fontFamily = LuckiestGuyFontFamily
+                                        fontFamily = LuckiestGuyFontFamily,
+                                        letterSpacing = 0.4.sp,
+                                        style = TextStyle(
+                                            shadow = Shadow(Color(0xFF7C2D12), Offset(1f, 2f), 2f)
+                                        )
                                     )
                                 }
                             }
                         }
-                    }
 
-                    // 2. RESTART Button (3D Warm Orange)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(46.dp)
-                            .zoomClickable { onRestart() },
-                        contentAlignment = Alignment.Center
-                    ) {
+                        // 3. QUIT TO MAP Button (3D Crimson Red with Purple Gradient Border)
                         Box(
                             modifier = Modifier
-                                .matchParentSize()
-                                .offset(y = 3.dp)
-                                .background(Color(0xFF7C2D12), RoundedCornerShape(16.dp))
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(Color(0xFFFB923C), Color(0xFFEA580C))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    brush = Brush.horizontalGradient(
-                                        listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                ),
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .zoomClickable { onBack() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            // Bottom Depth Shadow Underlay
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 3.5.dp)
+                                    .background(Color(0xFF450A0A), RoundedCornerShape(16.dp))
+                            )
+                            // 3D Extrusion Bevel Edge
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 1.5.dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color(0xFFDC2626), Color(0xFF991B1B))),
+                                        RoundedCornerShape(16.dp)
+                                    )
+                            )
+                            // Main Shiny Surface
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color(0xFFF87171), Color(0xFFEF4444), Color(0xFFB91C1C))
+                                        ),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFFEE2E2), Color(0xFFFCA5A5), Color(0xFFEF4444), Color(0xFF991B1B))
+                                        ),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .clip(RoundedCornerShape(16.dp)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = "Restart",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
+                                // Top Glossy Light Sheen
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(0.48f)
+                                        .align(Alignment.TopCenter)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                            )
+                                        )
                                 )
-                                Text(
-                                    text = "RESTART LEVEL",
-                                    color = Color.White,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Black,
-                                    fontFamily = LuckiestGuyFontFamily
-                                )
-                            }
-                        }
-                    }
-
-                    // 3. QUIT TO MAP Button (3D Crimson Red)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(46.dp)
-                            .zoomClickable { onBack() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .offset(y = 3.dp)
-                                .background(Color(0xFF7F1D1D), RoundedCornerShape(16.dp))
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(Color(0xFFEF4444), Color(0xFFDC2626))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    brush = Brush.horizontalGradient(
-                                        listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Home,
-                                    contentDescription = "Quit To Map",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Text(
-                                    text = "QUIT TO MAP",
-                                    color = Color.White,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Black,
-                                    fontFamily = LuckiestGuyFontFamily
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Home,
+                                        contentDescription = "Quit To Map",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = "QUIT TO MAP",
+                                        color = Color.White,
+                                        fontSize = 14.5.sp,
+                                        fontWeight = FontWeight.Black,
+                                        fontFamily = LuckiestGuyFontFamily,
+                                        letterSpacing = 0.4.sp,
+                                        style = TextStyle(
+                                            shadow = Shadow(Color(0xFF450A0A), Offset(1f, 2f), 2f)
+                                        )
+                                    )
+                                }
                             }
                         }
                     }
@@ -14013,7 +14296,7 @@ fun PausedPopup(
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.75f))
             .clickable(enabled = false) {}
-            .padding(20.dp),
+            .padding(horizontal = 16.dp, vertical = 20.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
@@ -14026,286 +14309,421 @@ fun PausedPopup(
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .offset(y = 5.dp)
-                    .background(Color(0xFF1E053A), RoundedCornerShape(26.dp))
+                    .offset(y = 6.dp)
+                    .background(Color(0xFF130424), RoundedCornerShape(28.dp))
             )
             // 3D Extrusion Bevel Edge
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .offset(y = 3.dp)
+                    .offset(y = 3.5.dp)
                     .background(
                         Brush.verticalGradient(listOf(Color(0xFF9333EA), Color(0xFF581C87))),
-                        RoundedCornerShape(26.dp)
+                        RoundedCornerShape(28.dp)
                     )
             )
 
-            // Main Popup Surface (Soft Purple)
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
+            // Main Popup Surface
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
                         brush = Brush.verticalGradient(
-                            listOf(Color(0xF03B1E68), Color(0xF0220E40))
+                            listOf(Color(0xFF381568), Color(0xFF230C44), Color(0xFF16052E))
                         ),
-                        shape = RoundedCornerShape(26.dp)
+                        shape = RoundedCornerShape(28.dp)
                     )
                     .border(
                         width = 3.dp,
                         brush = Brush.verticalGradient(
                             listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
                         ),
-                        shape = RoundedCornerShape(26.dp)
+                        shape = RoundedCornerShape(28.dp)
                     )
-                    .padding(horizontal = 18.dp, vertical = 20.dp)
+                    .clip(RoundedCornerShape(28.dp))
             ) {
-                // Header Row: GAME PAUSED (Left) and Close Button (Right)
-                Row(
+                // Top Gloss Sheen
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "GAME PAUSED",
-                        style = TextStyle(
-                            color = Color.White,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Black,
-                            fontFamily = LuckiestGuyFontFamily,
-                            shadow = Shadow(
-                                color = Color(0xFF0F172A),
-                                offset = Offset(2f, 3f),
-                                blurRadius = 4f
+                        .height(75.dp)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)
                             )
                         )
-                    )
-
-                    // 3D Close Button
-                    Image(
-                        painter = painterResource(id = R.drawable.btn_game_close),
-                        contentDescription = "Close",
-                        modifier = Modifier
-                            .size(42.dp)
-                            .bouncyClickable { onResume() },
-                        contentScale = ContentScale.Fit
-                    )
-                }
+                )
 
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 20.dp)
                 ) {
-                    // 1. RESUME (3D Emerald Green)
-                    Box(
+                    // Header Row: GAME PAUSED (Left) and Close Button (Right)
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp)
-                            .zoomClickable { onResume() },
-                        contentAlignment = Alignment.Center
+                            .padding(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .offset(y = 3.dp)
-                                .background(Color(0xFF064E3B), RoundedCornerShape(16.dp))
+                        Text(
+                            text = "GAME PAUSED",
+                            style = TextStyle(
+                                color = Color.White,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Black,
+                                fontFamily = LuckiestGuyFontFamily,
+                                shadow = Shadow(
+                                    color = Color(0xFF0F021F),
+                                    offset = Offset(2f, 3f),
+                                    blurRadius = 4f
+                                )
+                            )
                         )
-                        Box(
+
+                        // 3D Close Button
+                        Image(
+                            painter = painterResource(id = R.drawable.btn_game_close),
+                            contentDescription = "Close",
                             modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(Color(0xFF4ADE80), Color(0xFF16A34A))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    brush = Brush.horizontalGradient(
-                                        listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = "Resume",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Text(
-                                    text = "RESUME",
-                                    color = Color.White,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Black,
-                                    fontFamily = LuckiestGuyFontFamily
-                                )
-                            }
-                        }
+                                .size(42.dp)
+                                .bouncyClickable { onResume() },
+                            contentScale = ContentScale.Fit
+                        )
                     }
 
-                    // 2. RESTART (3D Warm Orange)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(46.dp)
-                            .zoomClickable { onRestart() },
-                        contentAlignment = Alignment.Center
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        // 1. RESUME (3D Emerald Green with Purple Gradient Border)
                         Box(
                             modifier = Modifier
-                                .matchParentSize()
-                                .offset(y = 3.dp)
-                                .background(Color(0xFF7C2D12), RoundedCornerShape(16.dp))
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(Color(0xFFFB923C), Color(0xFFEA580C))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    brush = Brush.horizontalGradient(
-                                        listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                ),
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .zoomClickable { onResume() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            // Bottom Depth Shadow Underlay
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 4.dp)
+                                    .background(Color(0xFF042F2C), RoundedCornerShape(18.dp))
+                            )
+                            // 3D Extrusion Bevel Edge
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 2.dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color(0xFF059669), Color(0xFF064E3B))),
+                                        RoundedCornerShape(18.dp)
+                                    )
+                            )
+                            // Main Shiny Surface
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color(0xFF34D399), Color(0xFF10B981), Color(0xFF047857))
+                                        ),
+                                        shape = RoundedCornerShape(18.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFD1FAE5), Color(0xFF6EE7B7), Color(0xFF10B981), Color(0xFF047857))
+                                        ),
+                                        shape = RoundedCornerShape(18.dp)
+                                    )
+                                    .clip(RoundedCornerShape(18.dp)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = "Restart",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
+                                // Top Glossy Light Sheen
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(0.48f)
+                                        .align(Alignment.TopCenter)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                            )
+                                        )
                                 )
-                                Text(
-                                    text = "RESTART",
-                                    color = Color.White,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Black,
-                                    fontFamily = LuckiestGuyFontFamily
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PlayArrow,
+                                        contentDescription = "Resume",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Text(
+                                        text = "RESUME",
+                                        color = Color.White,
+                                        fontSize = 16.5.sp,
+                                        fontWeight = FontWeight.Black,
+                                        fontFamily = LuckiestGuyFontFamily,
+                                        letterSpacing = 0.5.sp,
+                                        style = TextStyle(
+                                            shadow = Shadow(Color(0xFF022C22), Offset(1f, 2f), 2f)
+                                        )
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    // 3. HOW TO PLAY (3D Royal Purple)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(46.dp)
-                            .zoomClickable { onTutorial() },
-                        contentAlignment = Alignment.Center
-                    ) {
+                        // 2. RESTART (3D Warm Orange with Purple Gradient Border)
                         Box(
                             modifier = Modifier
-                                .matchParentSize()
-                                .offset(y = 3.dp)
-                                .background(Color(0xFF3B0764), RoundedCornerShape(16.dp))
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    brush = Brush.horizontalGradient(
-                                        listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                ),
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .zoomClickable { onRestart() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            // Bottom Depth Shadow Underlay
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 3.5.dp)
+                                    .background(Color(0xFF7C2D12), RoundedCornerShape(16.dp))
+                            )
+                            // 3D Extrusion Bevel Edge
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 1.5.dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color(0xFFEA580C), Color(0xFF9A3412))),
+                                        RoundedCornerShape(16.dp)
+                                    )
+                            )
+                            // Main Shiny Surface
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color(0xFFFB923C), Color(0xFFEA580C), Color(0xFFC2410C))
+                                        ),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFFFEDD5), Color(0xFFFDBA74), Color(0xFFFB923C), Color(0xFFC2410C))
+                                        ),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .clip(RoundedCornerShape(16.dp)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = "How To Play",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
+                                // Top Glossy Light Sheen
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(0.48f)
+                                        .align(Alignment.TopCenter)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                            )
+                                        )
                                 )
-                                Text(
-                                    text = "HOW TO PLAY",
-                                    color = Color.White,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Black,
-                                    fontFamily = LuckiestGuyFontFamily
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "Restart",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = "RESTART",
+                                        color = Color.White,
+                                        fontSize = 14.5.sp,
+                                        fontWeight = FontWeight.Black,
+                                        fontFamily = LuckiestGuyFontFamily,
+                                        letterSpacing = 0.4.sp,
+                                        style = TextStyle(
+                                            shadow = Shadow(Color(0xFF7C2D12), Offset(1f, 2f), 2f)
+                                        )
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    // 4. QUIT TO MAP (3D Crimson Red)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(46.dp)
-                            .zoomClickable { onQuit() },
-                        contentAlignment = Alignment.Center
-                    ) {
+                        // 3. HOW TO PLAY (3D Royal Cyan with Sky Blue Border)
                         Box(
                             modifier = Modifier
-                                .matchParentSize()
-                                .offset(y = 3.dp)
-                                .background(Color(0xFF7F1D1D), RoundedCornerShape(16.dp))
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(Color(0xFFEF4444), Color(0xFFDC2626))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    brush = Brush.horizontalGradient(
-                                        listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                ),
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .zoomClickable { onTutorial() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            // Bottom Depth Shadow Underlay
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 3.5.dp)
+                                    .background(Color(0xFF0C4A6E), RoundedCornerShape(16.dp))
+                            )
+                            // 3D Extrusion Bevel Edge
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 1.5.dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color(0xFF0284C7), Color(0xFF0369A1))),
+                                        RoundedCornerShape(16.dp)
+                                    )
+                            )
+                            // Main Shiny Surface
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color(0xFF38BDF8), Color(0xFF0284C7), Color(0xFF0369A1))
+                                        ),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFE0F2FE), Color(0xFF7DD3FC), Color(0xFF38BDF8), Color(0xFF0284C7))
+                                        ),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .clip(RoundedCornerShape(16.dp)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Home,
-                                    contentDescription = "Quit",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
+                                // Top Glossy Light Sheen
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(0.48f)
+                                        .align(Alignment.TopCenter)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                            )
+                                        )
                                 )
-                                Text(
-                                    text = "QUIT TO MAP",
-                                    color = Color.White,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Black,
-                                    fontFamily = LuckiestGuyFontFamily
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "How To Play",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = "HOW TO PLAY",
+                                        color = Color.White,
+                                        fontSize = 14.5.sp,
+                                        fontWeight = FontWeight.Black,
+                                        fontFamily = LuckiestGuyFontFamily,
+                                        letterSpacing = 0.4.sp,
+                                        style = TextStyle(
+                                            shadow = Shadow(Color(0xFF0C4A6E), Offset(1f, 2f), 2f)
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        // 4. QUIT TO MAP (3D Crimson Red with Purple Gradient Border)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .zoomClickable { onQuit() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Bottom Depth Shadow Underlay
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 3.5.dp)
+                                    .background(Color(0xFF450A0A), RoundedCornerShape(16.dp))
+                            )
+                            // 3D Extrusion Bevel Edge
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 1.5.dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color(0xFFDC2626), Color(0xFF991B1B))),
+                                        RoundedCornerShape(16.dp)
+                                    )
+                            )
+                            // Main Shiny Surface
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color(0xFFF87171), Color(0xFFEF4444), Color(0xFFB91C1C))
+                                        ),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFFEE2E2), Color(0xFFFCA5A5), Color(0xFFEF4444), Color(0xFF991B1B))
+                                        ),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .clip(RoundedCornerShape(16.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                // Top Glossy Light Sheen
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(0.48f)
+                                        .align(Alignment.TopCenter)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                            )
+                                        )
                                 )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Home,
+                                        contentDescription = "Quit",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = "QUIT TO MAP",
+                                        color = Color.White,
+                                        fontSize = 14.5.sp,
+                                        fontWeight = FontWeight.Black,
+                                        fontFamily = LuckiestGuyFontFamily,
+                                        letterSpacing = 0.4.sp,
+                                        style = TextStyle(
+                                            shadow = Shadow(Color(0xFF450A0A), Offset(1f, 2f), 2f)
+                                        )
+                                    )
+                                }
                             }
                         }
                     }
@@ -14320,6 +14738,8 @@ fun TutorialPopup(selectedBackgroundSkin: BackgroundSkin, onClose: () -> Unit) {
     var step by remember { mutableIntStateOf(1) }
     var dragAmountTotal by remember { mutableFloatStateOf(0f) }
     
+    BackHandler { onClose() }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -14327,11 +14747,11 @@ fun TutorialPopup(selectedBackgroundSkin: BackgroundSkin, onClose: () -> Unit) {
                 detectHorizontalDragGestures(
                     onDragStart = { dragAmountTotal = 0f },
                     onDragEnd = {
-                        if (dragAmountTotal > 120f) {
+                        if (dragAmountTotal > 100f) {
                             if (step > 1) {
                                 step--
                             }
-                        } else if (dragAmountTotal < -120f) {
+                        } else if (dragAmountTotal < -100f) {
                             if (step < 4) {
                                 step++
                             }
@@ -14349,457 +14769,595 @@ fun TutorialPopup(selectedBackgroundSkin: BackgroundSkin, onClose: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.65f))
+                .background(Color.Black.copy(alpha = 0.75f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) {}
         )
 
-        // Main Dialog Card (Standard Cream Card with Tri-Color Gradient Border)
+        // Main Dialog Card (3D Cosmic Arcade Container with Purple Gradient Border)
         Box(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .wrapContentHeight()
-                .shadow(16.dp, RoundedCornerShape(32.dp), clip = false)
-                .background(Color(0xFFFFF9E6), RoundedCornerShape(32.dp))
-                .border(
-                    width = 3.5.dp,
-                    brush = Brush.horizontalGradient(
-                        listOf(Color(0xFF0284C7), Color(0xFFFACC15), Color(0xFF22C55E))
-                    ),
-                    shape = RoundedCornerShape(32.dp)
-                )
-                .padding(horizontal = 20.dp, vertical = 22.dp)
+                .fillMaxWidth(0.94f)
+                .wrapContentHeight(),
+            contentAlignment = Alignment.Center
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+            // 1. 3D Depth Shadow Underlay
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(y = 6.dp)
+                    .background(Color(0xFF130424), RoundedCornerShape(28.dp))
+            )
+
+            // 2. 3D Extrusion Bevel Edge
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(y = 3.5.dp)
+                    .background(
+                        Brush.verticalGradient(listOf(Color(0xFF9333EA), Color(0xFF581C87))),
+                        RoundedCornerShape(28.dp)
+                    )
+            )
+
+            // 3. Main Surface
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            listOf(Color(0xFF381568), Color(0xFF230C44), Color(0xFF16052E))
+                        ),
+                        shape = RoundedCornerShape(28.dp)
+                    )
+                    .border(
+                        width = 3.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                        ),
+                        shape = RoundedCornerShape(28.dp)
+                    )
+                    .clip(RoundedCornerShape(28.dp))
             ) {
-                // Header Row with Title (Left) and Close Button (Right) - Zero Overlap
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.Start,
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.weight(1f).padding(end = 8.dp)
-                    ) {
-                        Text(
-                            text = "HOW TO PLAY",
-                            style = TextStyle(
-                                color = Color(0xFF0284C7),
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Black,
-                                fontFamily = LuckiestGuyFontFamily,
-                                shadow = Shadow(
-                                    color = Color(0xFF0369A1),
-                                    offset = Offset(0f, 3f),
-                                    blurRadius = 0f
-                                )
-                            )
-                        )
-                        
-                        // Badge Pill for Step
-                        Box(
-                            modifier = Modifier
-                                .background(Color(0xFFFFF9C4), RoundedCornerShape(12.dp))
-                                .border(1.5.dp, Color(0xFF22C55E), RoundedCornerShape(12.dp))
-                                .padding(horizontal = 10.dp, vertical = 3.dp)
-                        ) {
-                            Text(
-                                text = "STEP $step OF 4 • COLOR LINKER GUIDE",
-                                color = Color(0xFF15803D),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Black,
-                                fontFamily = LuckiestGuyFontFamily,
-                                letterSpacing = 0.5.sp
-                            )
-                        }
-                    }
-
-                    // Top Right Close / Cut Button (Matching Gameplay Screen Back Button)
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .bouncyClickable {
-                                onClose()
-                            }
-                            .background(Color(0xFFFFF9C4), RoundedCornerShape(14.dp))
-                            .border(
-                                width = 2.5.dp,
-                                brush = Brush.horizontalGradient(listOf(Color(0xFF0284C7), Color(0xFF22C55E))),
-                                shape = RoundedCornerShape(14.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = Color(0xFF2C1B47),
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-
-                // Solved Flow Pipe Preview Card (Matching Win Popup LevelCompleteDialog)
+                // Top Gloss Sheen Reflection
                 Box(
                     modifier = Modifier
-                        .size(140.dp)
-                        .background(Color(0xFF0F172A), RoundedCornerShape(16.dp))
-                        .border(
-                            width = 2.5.dp,
-                            brush = Brush.horizontalGradient(listOf(Color(0xFF0284C7), Color(0xFF22C55E))),
-                            shape = RoundedCornerShape(16.dp)
+                        .fillMaxWidth()
+                        .height(75.dp)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)
+                            )
                         )
-                        .padding(10.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val totalW = size.width
-                        val totalH = size.height
-                        val spacing = 3.dp.toPx()
-                        val gridSize = 4
-                        val cellW = (totalW - (gridSize - 1) * spacing) / gridSize
-                        val cellH = (totalH - (gridSize - 1) * spacing) / gridSize
-                        val stepX = cellW + spacing
-                        val stepY = cellH + spacing
-
-                        fun getCenter(r: Int, c: Int): Offset {
-                            return Offset(c * stepX + cellW / 2f, r * stepY + cellH / 2f)
-                        }
-
-                        // 1. Draw grid cell backgrounds
-                        for (r in 0 until gridSize) {
-                            for (c in 0 until gridSize) {
-                                val topLeft = Offset(c * stepX, r * stepY)
-                                drawRoundRect(
-                                    color = Color(0xFF1E293B),
-                                    topLeft = topLeft,
-                                    size = Size(cellW, cellH),
-                                    cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
-                                )
-                            }
-                        }
-
-                        val pipeStroke = cellW * 0.44f
-                        val dotRadius = cellW * 0.36f
-
-                        when (step) {
-                            1 -> {
-                                val p1 = getCenter(1, 0)
-                                val p2 = getCenter(1, 3)
-                                drawLine(
-                                    color = Color(0xFFFF3366),
-                                    start = p1,
-                                    end = p2,
-                                    strokeWidth = pipeStroke,
-                                    cap = StrokeCap.Round
-                                )
-                                drawCircle(color = Color(0xFFFF3366), radius = dotRadius, center = p1)
-                                drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = p1)
-                                drawCircle(color = Color(0xFFFF3366), radius = dotRadius, center = p2)
-                                drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = p2)
-
-                                val pulse = 1f + 0.1f * kotlin.math.sin(System.currentTimeMillis() / 150.0).toFloat()
-                                drawCircle(
-                                    color = Color(0xFFFF3366).copy(alpha = 0.35f),
-                                    radius = dotRadius * 1.3f * pulse,
-                                    center = p2
-                                )
-                            }
-                            2 -> {
-                                val r1 = getCenter(1, 0)
-                                val r2 = getCenter(1, 3)
-                                drawLine(
-                                    color = Color(0xFFFF3366),
-                                    start = r1,
-                                    end = r2,
-                                    strokeWidth = pipeStroke,
-                                    cap = StrokeCap.Round
-                                )
-                                drawCircle(color = Color(0xFFFF3366), radius = dotRadius, center = r1)
-                                drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = r1)
-                                drawCircle(color = Color(0xFFFF3366), radius = dotRadius, center = r2)
-                                drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = r2)
-
-                                val b1 = getCenter(0, 2)
-                                val b2 = getCenter(3, 2)
-                                drawCircle(color = Color(0xFF00B4D8), radius = dotRadius, center = b1)
-                                drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = b1)
-                                drawCircle(color = Color(0xFF00B4D8), radius = dotRadius, center = b2)
-                                drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = b2)
-
-                                val xCenter = getCenter(1, 2)
-                                val xSize = cellW * 0.32f
-                                drawLine(
-                                    color = Color(0xFFFACC15),
-                                    start = Offset(xCenter.x - xSize, xCenter.y - xSize),
-                                    end = Offset(xCenter.x + xSize, xCenter.y + xSize),
-                                    strokeWidth = 3.5.dp.toPx(),
-                                    cap = StrokeCap.Round
-                                )
-                                drawLine(
-                                    color = Color(0xFFFACC15),
-                                    start = Offset(xCenter.x + xSize, xCenter.y - xSize),
-                                    end = Offset(xCenter.x - xSize, xCenter.y + xSize),
-                                    strokeWidth = 3.5.dp.toPx(),
-                                    cap = StrokeCap.Round
-                                )
-                            }
-                            3 -> {
-                                val colors = listOf(
-                                    Color(0xFFFF3366),
-                                    Color(0xFF00B4D8),
-                                    Color(0xFF10B981),
-                                    Color(0xFFFFB703)
-                                )
-                                for (r in 0..3) {
-                                    val start = getCenter(r, 0)
-                                    val end = getCenter(r, 3)
-                                    val col = colors[r]
-                                    drawLine(
-                                        color = col,
-                                        start = start,
-                                        end = end,
-                                        strokeWidth = pipeStroke,
-                                        cap = StrokeCap.Round
-                                    )
-                                    drawCircle(color = col, radius = dotRadius, center = start)
-                                    drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = start)
-                                    drawCircle(color = col, radius = dotRadius, center = end)
-                                    drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = end)
-                                }
-                            }
-                            else -> {
-                                val colors = listOf(
-                                    Color(0xFFFF3366),
-                                    Color(0xFF00B4D8),
-                                    Color(0xFF10B981),
-                                    Color(0xFFFFB703)
-                                )
-                                for (r in 0..3) {
-                                    val start = getCenter(r, 0)
-                                    val end = getCenter(r, 3)
-                                    val col = colors[r]
-                                    drawLine(
-                                        color = col,
-                                        start = start,
-                                        end = end,
-                                        strokeWidth = pipeStroke,
-                                        cap = StrokeCap.Round
-                                    )
-                                    drawCircle(color = col, radius = dotRadius, center = start)
-                                    drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = start)
-                                    drawCircle(color = col, radius = dotRadius, center = end)
-                                    drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = end)
-                                }
-
-                                val w = size.width
-                                val h = size.height
-                                val starPath = Path().apply {
-                                    val cx = w * 0.5f
-                                    val cy = h * 0.5f
-                                    val spikes = 5
-                                    val outerRadius = 32.dp.toPx()
-                                    val innerRadius = 14.dp.toPx()
-                                    var rot = Math.PI / 2 * 3
-                                    val stepAngle = Math.PI / spikes
-                                    
-                                    moveTo(cx, cy - outerRadius)
-                                    for (i in 0 until spikes) {
-                                        var x = cx + kotlin.math.cos(rot).toFloat() * outerRadius
-                                        var y = cy + kotlin.math.sin(rot).toFloat() * outerRadius
-                                        lineTo(x, y)
-                                        rot += stepAngle
-                                        
-                                        x = cx + kotlin.math.cos(rot).toFloat() * innerRadius
-                                        y = cy + kotlin.math.sin(rot).toFloat() * innerRadius
-                                        lineTo(x, y)
-                                        rot += stepAngle
-                                    }
-                                    close()
-                                }
-                                drawPath(starPath, color = Color(0xFFFACC15))
-                                drawPath(starPath, color = Color(0xFF78350F), style = Stroke(width = 2.5.dp.toPx()))
-                                
-                                val checkPath = Path().apply {
-                                    moveTo(w * 0.44f, h * 0.52f)
-                                    lineTo(w * 0.48f, h * 0.57f)
-                                    lineTo(w * 0.57f, h * 0.42f)
-                                }
-                                drawPath(checkPath, color = Color(0xFF15803D), style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-                            }
-                        }
-                    }
-                }
-
-                // Step Title & Description Box
-                val stepTitle = when (step) {
-                    1 -> "CONNECT MATCHING COLORS"
-                    2 -> "DO NOT CROSS LINES"
-                    3 -> "COVER THE WHOLE BOARD"
-                    else -> "WIN STARS & DIAMONDS"
-                }
-                val stepDesc = when (step) {
-                    1 -> "Drag from one colored dot to another with matching color to create a continuous glowing link."
-                    2 -> "Lines cannot cross or overlap each other. If lines cross, the previous connection will break."
-                    3 -> "Connect all color pairs and cover every single cell on the board to solve the puzzle perfectly."
-                    else -> "Complete levels to earn 3 Stars, collect diamond coins, and claim cash milestone rewards!"
-                }
+                )
 
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 22.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = stepTitle,
-                        color = Color(0xFF0284C7),
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Black,
-                        fontFamily = LuckiestGuyFontFamily,
-                        textAlign = TextAlign.Center
-                    )
-                    
+                    // Header Row with Title (Left) and Close Button (Right)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.Start,
+                            verticalArrangement = Arrangement.spacedBy(3.dp),
+                            modifier = Modifier.weight(1f).padding(end = 8.dp)
+                        ) {
+                            Text(
+                                text = "HOW TO PLAY",
+                                style = TextStyle(
+                                    color = Color(0xFFFFD54F),
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Black,
+                                    fontFamily = LuckiestGuyFontFamily,
+                                    shadow = Shadow(
+                                        color = Color(0xFF0F172A),
+                                        offset = Offset(2f, 3f),
+                                        blurRadius = 4f
+                                    )
+                                )
+                            )
+                            
+                            // Badge Pill for Step
+                            Box(
+                                modifier = Modifier
+                                    .background(Color(0x99180730), RoundedCornerShape(10.dp))
+                                    .border(
+                                        1.5.dp,
+                                        Brush.verticalGradient(
+                                            listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                                        ),
+                                        RoundedCornerShape(10.dp)
+                                    )
+                                    .padding(horizontal = 10.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = "STEP $step OF 4 • COLOR LINKER GUIDE",
+                                    color = Color(0xFF38BDF8),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    fontFamily = LuckiestGuyFontFamily,
+                                    letterSpacing = 0.5.sp
+                                )
+                            }
+                        }
+
+                        // 3D Close Button (matching Settings Popup)
+                        Image(
+                            painter = painterResource(id = R.drawable.btn_game_close),
+                            contentDescription = "Close",
+                            modifier = Modifier
+                                .width(42.dp)
+                                .height(43.dp)
+                                .bouncyClickable { onClose() },
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+
+                    // Solved Flow Pipe Preview Card (Deep Contrast Slot with Purple Border)
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .shadow(2.dp, RoundedCornerShape(16.dp), clip = false)
-                            .background(Color.White, RoundedCornerShape(16.dp))
-                            .border(1.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(16.dp))
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                            .size(136.dp)
+                            .background(Color(0xEE110422), RoundedCornerShape(18.dp))
+                            .border(
+                                width = 2.dp,
+                                brush = Brush.verticalGradient(
+                                    listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                                ),
+                                shape = RoundedCornerShape(18.dp)
+                            )
+                            .padding(8.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = stepDesc,
-                            color = Color(0xFF334155),
-                            fontSize = 12.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            textAlign = TextAlign.Center,
-                            lineHeight = 17.sp
-                        )
-                    }
-                }
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val totalW = size.width
+                            val totalH = size.height
+                            val spacing = 3.dp.toPx()
+                            val gridSize = 4
+                            val cellW = (totalW - (gridSize - 1) * spacing) / gridSize
+                            val cellH = (totalH - (gridSize - 1) * spacing) / gridSize
+                            val stepX = cellW + spacing
+                            val stepY = cellH + spacing
 
-                // Step Indicator Pills
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    repeat(4) { i ->
-                        val isActive = i + 1 == step
+                            fun getCenter(r: Int, c: Int): Offset {
+                                return Offset(c * stepX + cellW / 2f, r * stepY + cellH / 2f)
+                            }
+
+                            // 1. Draw grid cell backgrounds
+                            for (r in 0 until gridSize) {
+                                for (c in 0 until gridSize) {
+                                    val topLeft = Offset(c * stepX, r * stepY)
+                                    drawRoundRect(
+                                        color = Color(0xFF1E0E38),
+                                        topLeft = topLeft,
+                                        size = Size(cellW, cellH),
+                                        cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                                    )
+                                }
+                            }
+
+                            val pipeStroke = cellW * 0.44f
+                            val dotRadius = cellW * 0.36f
+
+                            when (step) {
+                                1 -> {
+                                    val p1 = getCenter(1, 0)
+                                    val p2 = getCenter(1, 3)
+                                    drawLine(
+                                        color = Color(0xFFFF3366),
+                                        start = p1,
+                                        end = p2,
+                                        strokeWidth = pipeStroke,
+                                        cap = StrokeCap.Round
+                                    )
+                                    drawCircle(color = Color(0xFFFF3366), radius = dotRadius, center = p1)
+                                    drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = p1)
+                                    drawCircle(color = Color(0xFFFF3366), radius = dotRadius, center = p2)
+                                    drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = p2)
+
+                                    val pulse = 1f + 0.1f * kotlin.math.sin(System.currentTimeMillis() / 150.0).toFloat()
+                                    drawCircle(
+                                        color = Color(0xFFFF3366).copy(alpha = 0.35f),
+                                        radius = dotRadius * 1.3f * pulse,
+                                        center = p2
+                                    )
+                                }
+                                2 -> {
+                                    val r1 = getCenter(1, 0)
+                                    val r2 = getCenter(1, 3)
+                                    drawLine(
+                                        color = Color(0xFFFF3366),
+                                        start = r1,
+                                        end = r2,
+                                        strokeWidth = pipeStroke,
+                                        cap = StrokeCap.Round
+                                    )
+                                    drawCircle(color = Color(0xFFFF3366), radius = dotRadius, center = r1)
+                                    drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = r1)
+                                    drawCircle(color = Color(0xFFFF3366), radius = dotRadius, center = r2)
+                                    drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = r2)
+
+                                    val b1 = getCenter(0, 2)
+                                    val b2 = getCenter(3, 2)
+                                    drawCircle(color = Color(0xFF00B4D8), radius = dotRadius, center = b1)
+                                    drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = b1)
+                                    drawCircle(color = Color(0xFF00B4D8), radius = dotRadius, center = b2)
+                                    drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = b2)
+
+                                    val xCenter = getCenter(1, 2)
+                                    val xSize = cellW * 0.32f
+                                    drawLine(
+                                        color = Color(0xFFFACC15),
+                                        start = Offset(xCenter.x - xSize, xCenter.y - xSize),
+                                        end = Offset(xCenter.x + xSize, xCenter.y + xSize),
+                                        strokeWidth = 3.5.dp.toPx(),
+                                        cap = StrokeCap.Round
+                                    )
+                                    drawLine(
+                                        color = Color(0xFFFACC15),
+                                        start = Offset(xCenter.x + xSize, xCenter.y - xSize),
+                                        end = Offset(xCenter.x - xSize, xCenter.y + xSize),
+                                        strokeWidth = 3.5.dp.toPx(),
+                                        cap = StrokeCap.Round
+                                    )
+                                }
+                                3 -> {
+                                    val colors = listOf(
+                                        Color(0xFFFF3366),
+                                        Color(0xFF00B4D8),
+                                        Color(0xFF10B981),
+                                        Color(0xFFFFB703)
+                                    )
+                                    for (r in 0..3) {
+                                        val start = getCenter(r, 0)
+                                        val end = getCenter(r, 3)
+                                        val col = colors[r]
+                                        drawLine(
+                                            color = col,
+                                            start = start,
+                                            end = end,
+                                            strokeWidth = pipeStroke,
+                                            cap = StrokeCap.Round
+                                        )
+                                        drawCircle(color = col, radius = dotRadius, center = start)
+                                        drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = start)
+                                        drawCircle(color = col, radius = dotRadius, center = end)
+                                        drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = end)
+                                    }
+                                }
+                                else -> {
+                                    val colors = listOf(
+                                        Color(0xFFFF3366),
+                                        Color(0xFF00B4D8),
+                                        Color(0xFF10B981),
+                                        Color(0xFFFFB703)
+                                    )
+                                    for (r in 0..3) {
+                                        val start = getCenter(r, 0)
+                                        val end = getCenter(r, 3)
+                                        val col = colors[r]
+                                        drawLine(
+                                            color = col,
+                                            start = start,
+                                            end = end,
+                                            strokeWidth = pipeStroke,
+                                            cap = StrokeCap.Round
+                                        )
+                                        drawCircle(color = col, radius = dotRadius, center = start)
+                                        drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = start)
+                                        drawCircle(color = col, radius = dotRadius, center = end)
+                                        drawCircle(color = Color.White.copy(alpha = 0.6f), radius = dotRadius * 0.38f, center = end)
+                                    }
+
+                                    val w = size.width
+                                    val h = size.height
+                                    val starPath = Path().apply {
+                                        val cx = w * 0.5f
+                                        val cy = h * 0.5f
+                                        val spikes = 5
+                                        val outerRadius = 32.dp.toPx()
+                                        val innerRadius = 14.dp.toPx()
+                                        var rot = Math.PI / 2 * 3
+                                        val stepAngle = Math.PI / spikes
+                                        
+                                        moveTo(cx, cy - outerRadius)
+                                        for (i in 0 until spikes) {
+                                            var x = cx + kotlin.math.cos(rot).toFloat() * outerRadius
+                                            var y = cy + kotlin.math.sin(rot).toFloat() * outerRadius
+                                            lineTo(x, y)
+                                            rot += stepAngle
+                                            
+                                            x = cx + kotlin.math.cos(rot).toFloat() * innerRadius
+                                            y = cy + kotlin.math.sin(rot).toFloat() * innerRadius
+                                            lineTo(x, y)
+                                            rot += stepAngle
+                                        }
+                                        close()
+                                    }
+                                    drawPath(starPath, color = Color(0xFFFACC15))
+                                    drawPath(starPath, color = Color(0xFF78350F), style = Stroke(width = 2.5.dp.toPx()))
+                                    
+                                    val checkPath = Path().apply {
+                                        moveTo(w * 0.44f, h * 0.52f)
+                                        lineTo(w * 0.48f, h * 0.57f)
+                                        lineTo(w * 0.57f, h * 0.42f)
+                                    }
+                                    drawPath(checkPath, color = Color(0xFF15803D), style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                                }
+                            }
+                        }
+                    }
+
+                    // Step Title & Description Box
+                    val stepTitle = when (step) {
+                        1 -> "CONNECT MATCHING COLORS"
+                        2 -> "DO NOT CROSS LINES"
+                        3 -> "COVER THE WHOLE BOARD"
+                        else -> "WIN STARS & DIAMONDS"
+                    }
+                    val stepDesc = when (step) {
+                        1 -> "Drag from one colored dot to another with matching color to create a continuous glowing link."
+                        2 -> "Lines cannot cross or overlap each other. If lines cross, the previous connection will break."
+                        3 -> "Connect all color pairs and cover every single cell on the board to solve the puzzle perfectly."
+                        else -> "Complete levels to earn 3 Stars, collect diamond coins, and claim cash milestone rewards!"
+                    }
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = stepTitle,
+                            color = Color(0xFF38BDF8),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Black,
+                            fontFamily = LuckiestGuyFontFamily,
+                            textAlign = TextAlign.Center,
+                            letterSpacing = 0.5.sp
+                        )
+                        
                         Box(
                             modifier = Modifier
-                                .height(8.dp)
-                                .width(if (isActive) 24.dp else 8.dp)
-                                .background(
-                                    if (isActive) Brush.horizontalGradient(listOf(Color(0xFF0284C7), Color(0xFF22C55E)))
-                                    else Brush.horizontalGradient(listOf(Color(0xFFCBD5E1), Color(0xFFCBD5E1))),
-                                    RoundedCornerShape(4.dp)
+                                .fillMaxWidth()
+                                .background(Color(0xCC150729), RoundedCornerShape(16.dp))
+                                .border(
+                                    1.5.dp,
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                                    ),
+                                    RoundedCornerShape(16.dp)
                                 )
-                        )
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stepDesc,
+                                color = Color(0xFFE2E8F0),
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 17.sp
+                            )
+                        }
                     }
-                }
 
-                // Navigation Buttons Row (Matching Pause Popup Buttons UI)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (step > 1) {
-                        // Previous Button (Orange Gradient matching Pause Popup style)
+                    // Step Indicator Glowing Pills
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        repeat(4) { i ->
+                            val isActive = i + 1 == step
+                            Box(
+                                modifier = Modifier
+                                    .height(8.dp)
+                                    .width(if (isActive) 26.dp else 8.dp)
+                                    .background(
+                                        if (isActive) Brush.horizontalGradient(
+                                            listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3))
+                                        )
+                                        else Brush.horizontalGradient(
+                                            listOf(Color(0x55A855F7), Color(0x337E22CE))
+                                        ),
+                                        RoundedCornerShape(4.dp)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (isActive) Color(0xFFF5D0FE) else Color(0x44A855F7),
+                                        RoundedCornerShape(4.dp)
+                                    )
+                            )
+                        }
+                    }
+                        // Navigation Buttons Row (Matching Settings Popup 3D Buttons)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (step > 1) {
+                            // PREV Button (3D Crimson Red Style from Settings Popup)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(52.dp)
+                                    .bouncyClickable {
+                                        step--
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .offset(y = 3.5.dp)
+                                        .background(Color(0xFF450A0A), RoundedCornerShape(16.dp))
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .offset(y = 1.5.dp)
+                                        .background(
+                                            Brush.verticalGradient(listOf(Color(0xFFDC2626), Color(0xFF991B1B))),
+                                            RoundedCornerShape(16.dp)
+                                        )
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            brush = Brush.verticalGradient(
+                                                colors = listOf(Color(0xFFF87171), Color(0xFFDC2626), Color(0xFF991B1B))
+                                            ),
+                                            shape = RoundedCornerShape(16.dp)
+                                        )
+                                        .border(
+                                            width = 1.5.dp,
+                                            brush = Brush.verticalGradient(
+                                                listOf(Color(0xFFFECACA), Color(0xFFF87171), Color(0xFFB91C1C))
+                                            ),
+                                            shape = RoundedCornerShape(16.dp)
+                                        )
+                                        .clip(RoundedCornerShape(16.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .fillMaxHeight(0.48f)
+                                            .align(Alignment.TopCenter)
+                                            .background(
+                                                Brush.verticalGradient(
+                                                    listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                                )
+                                            )
+                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                            contentDescription = "Previous",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = "PREV",
+                                            color = Color.White,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Black,
+                                            fontFamily = LuckiestGuyFontFamily,
+                                            letterSpacing = 0.8.sp,
+                                            style = TextStyle(
+                                                shadow = Shadow(Color(0xFF450A0A), Offset(1f, 2f), 2f)
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // NEXT / START Button (3D Golden-Yellow Hero Button matching Settings Popup)
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(48.dp)
-                                .zoomClickable {
-                                    step--
-                                }
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(Color(0xFFFF9F1C), Color(0xFFF15A24))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                )
-                                .border(
-                                    width = 2.5.dp,
-                                    brush = Brush.horizontalGradient(
-                                        listOf(Color(0xFF0284C7), Color(0xFFFACC15), Color(0xFF22C55E))
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                ),
+                                .height(52.dp)
+                                .bouncyClickable {
+                                    if (step < 4) {
+                                        step++
+                                    } else {
+                                        onClose()
+                                    }
+                                },
                             contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            // Bottom Depth Shadow Underlay
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 4.dp)
+                                    .background(Color(0xFF78350F), RoundedCornerShape(18.dp))
+                            )
+                            // 3D Extrusion Bevel Edge
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 2.dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color(0xFFD97706), Color(0xFF92400E))),
+                                        RoundedCornerShape(18.dp)
+                                    )
+                            )
+                            // Main Shiny Button Surface
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color(0xFFFFFBEB),
+                                                Color(0xFFFFD54F),
+                                                Color(0xFFFFB300),
+                                                Color(0xFFD97706)
+                                            )
+                                        ),
+                                        shape = RoundedCornerShape(18.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFFFFDF0), Color(0xFFFFE082), Color(0xFFF59E0B), Color(0xFFB45309))
+                                        ),
+                                        shape = RoundedCornerShape(18.dp)
+                                    )
+                                    .clip(RoundedCornerShape(18.dp)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Previous",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
+                                // Top Glossy Light Sheen
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(0.48f)
+                                        .align(Alignment.TopCenter)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.5f), Color.White.copy(alpha = 0.05f))
+                                            )
+                                        )
                                 )
-                                Text(
-                                    text = "PREV",
-                                    color = Color.White,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Black,
-                                    fontFamily = LuckiestGuyFontFamily
-                                )
-                            }
-                        }
-                    }
-
-                    // Next / Start Playing Button (Green Gradient matching Pause Popup Resume style)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp)
-                            .zoomClickable {
-                                if (step < 4) {
-                                    step++
-                                } else {
-                                    onClose()
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (step < 4) Icons.AutoMirrored.Filled.ArrowForward else Icons.Default.PlayArrow,
+                                        contentDescription = if (step < 4) "Next" else "Start",
+                                        tint = Color(0xFF451A03),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = if (step < 4) "NEXT" else "START",
+                                        style = TextStyle(
+                                            color = Color(0xFF381200),
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Black,
+                                            fontFamily = LuckiestGuyFontFamily,
+                                            letterSpacing = 0.8.sp,
+                                            shadow = Shadow(Color(0x40FFFFFF), Offset(0f, 1f), 1f)
+                                        )
+                                    )
                                 }
                             }
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(Color(0xFF4ADE80), Color(0xFF16A34A))
-                                ),
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                            .border(
-                                width = 2.5.dp,
-                                brush = Brush.horizontalGradient(
-                                    listOf(Color(0xFF0284C7), Color(0xFFFACC15), Color(0xFF22C55E))
-                                ),
-                                shape = RoundedCornerShape(16.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (step < 4) Icons.AutoMirrored.Filled.ArrowForward else Icons.Default.PlayArrow,
-                                contentDescription = if (step < 4) "Next" else "Start",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = if (step < 4) "NEXT" else "START",
-                                color = Color.White,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Black,
-                                fontFamily = LuckiestGuyFontFamily
-                            )
                         }
                     }
                 }
@@ -15083,7 +15641,7 @@ fun LevelCompletePopup(
                     .matchParentSize()
                     .padding(top = 40.dp)
                     .offset(y = 6.dp)
-                    .background(Color(0xFF1E053A), RoundedCornerShape(28.dp))
+                    .background(Color(0xFF130424), RoundedCornerShape(28.dp))
             )
             // 3D Extrusion Bevel Edge
             Box(
@@ -15097,14 +15655,14 @@ fun LevelCompletePopup(
                     )
             )
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
+            // Main Surface Container
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 40.dp)
                     .background(
                         brush = Brush.verticalGradient(
-                            listOf(Color(0xF03B1E68), Color(0xF0220E40))
+                            listOf(Color(0xFF381568), Color(0xFF230C44), Color(0xFF16052E))
                         ),
                         shape = RoundedCornerShape(28.dp)
                     )
@@ -15115,56 +15673,75 @@ fun LevelCompletePopup(
                         ),
                         shape = RoundedCornerShape(28.dp)
                     )
-                    .padding(start = 18.dp, end = 18.dp, top = 20.dp, bottom = 22.dp)
+                    .clip(RoundedCornerShape(28.dp))
             ) {
-                // Header Row: LEVEL COMPLETE (Left) and Close/Home Button (Right)
-                Row(
+                // Top Gloss Sheen Reflection
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.weight(1f, fill = false)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.EmojiEvents,
-                            contentDescription = "Win",
-                            tint = Color(0xFFFEF08A),
-                            modifier = Modifier.size(28.dp)
+                        .height(85.dp)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)
+                            )
                         )
-                        Text(
-                            text = "LEVEL COMPLETE",
-                            style = TextStyle(
-                                color = Color.White,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Black,
-                                fontFamily = LuckiestGuyFontFamily,
-                                shadow = Shadow(
-                                    color = Color(0xFF0F172A),
-                                    offset = Offset(2f, 3f),
-                                    blurRadius = 4f
-                                )
-                            ),
-                            maxLines = 1
+                )
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 18.dp, end = 18.dp, top = 20.dp, bottom = 22.dp)
+                ) {
+                    // Header Row: LEVEL COMPLETE (Left) and Close/Home Button (Right)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f, fill = false)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = "Win",
+                                tint = Color(0xFFFEF08A),
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Text(
+                                text = "LEVEL COMPLETE",
+                                style = TextStyle(
+                                    color = Color.White,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Black,
+                                    fontFamily = LuckiestGuyFontFamily,
+                                    shadow = Shadow(
+                                        color = Color(0xFF0F172A),
+                                        offset = Offset(2f, 3f),
+                                        blurRadius = 4f
+                                    )
+                                ),
+                                maxLines = 1
+                            )
+                        }
+
+                        Spacer(Modifier.width(6.dp))
+
+                        // 3D Close Button
+                        Image(
+                            painter = painterResource(id = R.drawable.btn_game_close),
+                            contentDescription = "Close",
+                            modifier = Modifier
+                                .size(44.dp)
+                                .bouncyClickable { onHome() },
+                            contentScale = ContentScale.Fit
                         )
                     }
-
-                    Spacer(Modifier.width(6.dp))
-
-                    // 3D Close Button
-                    Image(
-                        painter = painterResource(id = R.drawable.btn_game_close),
-                        contentDescription = "Close",
-                        modifier = Modifier
-                            .size(44.dp)
-                            .bouncyClickable { onHome() },
-                        contentScale = ContentScale.Fit
-                    )
-                }
 
                 // Solved Flow Pipe Preview Card (Grand 200dp Preview)
                 Box(
@@ -15310,7 +15887,7 @@ fun LevelCompletePopup(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Diamond Coins", color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                        Text("Diamond Coins", color = Color(0xFFCBD5E1), fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
                         Text("+ $coinsEarned 💎", color = Color(0xFFFEF08A), fontWeight = FontWeight.Black, fontSize = 15.sp, fontFamily = LuckiestGuyFontFamily)
                     }
                 }
@@ -15322,49 +15899,75 @@ fun LevelCompletePopup(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (activeMilestoneReward != null) {
+                        // 3D Milestone Reward Button with Purple Gradient Border
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(52.dp)
+                                .height(54.dp)
                                 .zoomClickable { onClaimReward() },
                             contentAlignment = Alignment.Center
                         ) {
+                            // Bottom Depth Shadow Underlay
                             Box(
                                 modifier = Modifier
                                     .matchParentSize()
-                                    .offset(y = 3.dp)
-                                    .background(Color(0xFF78350F), RoundedCornerShape(16.dp))
+                                    .offset(y = 4.dp)
+                                    .background(Color(0xFF78350F), RoundedCornerShape(18.dp))
                             )
+                            // 3D Extrusion Bevel Edge
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 2.dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color(0xFFD97706), Color(0xFF92400E))),
+                                        RoundedCornerShape(18.dp)
+                                    )
+                            )
+                            // Main Shiny Surface
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(
-                                        brush = Brush.horizontalGradient(
-                                            colors = listOf(Color(0xFFFDE047), Color(0xFFF59E0B), Color(0xFFD97706))
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color(0xFFFFFBEB), Color(0xFFFFD54F), Color(0xFFFFB300), Color(0xFFD97706))
                                         ),
-                                        shape = RoundedCornerShape(16.dp)
+                                        shape = RoundedCornerShape(18.dp)
                                     )
                                     .border(
                                         width = 2.dp,
-                                        brush = Brush.horizontalGradient(
-                                            listOf(Color(0xFFFFEA79), Color(0xFFFFB300))
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFFFFDF0), Color(0xFFFFE082), Color(0xFFF59E0B), Color(0xFFB45309))
                                         ),
-                                        shape = RoundedCornerShape(16.dp)
-                                    ),
+                                        shape = RoundedCornerShape(18.dp)
+                                    )
+                                    .clip(RoundedCornerShape(18.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
+                                // Top Glossy Light Sheen
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(0.48f)
+                                        .align(Alignment.TopCenter)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.5f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                            )
+                                        )
+                                )
                                 Text(
                                     text = "🎁 CLAIM UPTO ₹ REWARD!",
                                     style = TextStyle(
-                                        color = Color.White,
-                                        fontSize = 16.sp,
+                                        color = Color(0xFF381200),
+                                        fontSize = 16.5.sp,
                                         fontWeight = FontWeight.Black,
                                         fontFamily = LuckiestGuyFontFamily,
                                         letterSpacing = 0.5.sp,
                                         shadow = Shadow(
-                                            color = Color(0xFF78350F),
-                                            offset = Offset(2f, 3f),
-                                            blurRadius = 2f
+                                            color = Color.White.copy(alpha = 0.6f),
+                                            offset = Offset(0f, 1.5f),
+                                            blurRadius = 1f
                                         )
                                     )
                                 )
@@ -15372,11 +15975,12 @@ fun LevelCompletePopup(
                         }
                     }
 
-                    // 1. NEXT LEVEL (3D Giant Emerald Green Button)
+                    // 1. NEXT LEVEL (3D Giant Emerald Green Button with Green Gradient Border)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)
+                            .scale(buttonScale)
                             .zoomClickable {
                                 if (!isClicked) {
                                     isClicked = true
@@ -15385,30 +15989,55 @@ fun LevelCompletePopup(
                             },
                         contentAlignment = Alignment.Center
                     ) {
+                        // Bottom Depth Shadow Underlay
                         Box(
                             modifier = Modifier
                                 .matchParentSize()
-                                .offset(y = 3.dp)
-                                .background(Color(0xFF064E3B), RoundedCornerShape(16.dp))
+                                .offset(y = 4.5.dp)
+                                .background(Color(0xFF042F2C), RoundedCornerShape(18.dp))
                         )
+                        // 3D Extrusion Bevel Edge
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(y = 2.dp)
+                                .background(
+                                    Brush.verticalGradient(listOf(Color(0xFF059669), Color(0xFF064E3B))),
+                                    RoundedCornerShape(18.dp)
+                                )
+                        )
+                        // Main Shiny Surface
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(
                                     brush = Brush.verticalGradient(
-                                        colors = listOf(Color(0xFF4ADE80), Color(0xFF16A34A))
+                                        colors = listOf(Color(0xFF34D399), Color(0xFF10B981), Color(0xFF047857))
                                     ),
-                                    shape = RoundedCornerShape(16.dp)
+                                    shape = RoundedCornerShape(18.dp)
                                 )
                                 .border(
-                                    width = 2.5.dp,
-                                    brush = Brush.horizontalGradient(
-                                        listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
+                                    width = 2.dp,
+                                    brush = Brush.verticalGradient(
+                                        listOf(Color(0xFFD1FAE5), Color(0xFF6EE7B7), Color(0xFF10B981), Color(0xFF047857))
                                     ),
-                                    shape = RoundedCornerShape(16.dp)
-                                ),
+                                    shape = RoundedCornerShape(18.dp)
+                                )
+                                .clip(RoundedCornerShape(18.dp)),
                             contentAlignment = Alignment.Center
                         ) {
+                            // Top Glossy Light Sheen
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(0.48f)
+                                    .align(Alignment.TopCenter)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                        )
+                                    )
+                            )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -15422,9 +16051,13 @@ fun LevelCompletePopup(
                                 Text(
                                     text = "NEXT LEVEL",
                                     color = Color.White,
-                                    fontSize = 17.sp,
+                                    fontSize = 17.5.sp,
                                     fontWeight = FontWeight.Black,
-                                    fontFamily = LuckiestGuyFontFamily
+                                    fontFamily = LuckiestGuyFontFamily,
+                                    letterSpacing = 0.6.sp,
+                                    style = TextStyle(
+                                        shadow = Shadow(Color(0xFF022C22), Offset(1f, 2f), 2f)
+                                    )
                                 )
                             }
 
@@ -15456,7 +16089,7 @@ fun LevelCompletePopup(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // RESTART Button (3D Orange)
+                        // RESTART Button (3D Orange with Purple Gradient Border)
                         Box(
                             modifier = Modifier
                                 .weight(1f)
@@ -15464,30 +16097,55 @@ fun LevelCompletePopup(
                                 .zoomClickable { onRestart() },
                             contentAlignment = Alignment.Center
                         ) {
+                            // Bottom Depth Shadow Underlay
                             Box(
                                 modifier = Modifier
                                     .matchParentSize()
-                                    .offset(y = 3.dp)
+                                    .offset(y = 3.5.dp)
                                     .background(Color(0xFF7C2D12), RoundedCornerShape(16.dp))
                             )
+                            // 3D Extrusion Bevel Edge
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 1.5.dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color(0xFFEA580C), Color(0xFF9A3412))),
+                                        RoundedCornerShape(16.dp)
+                                    )
+                            )
+                            // Main Shiny Surface
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(
                                         brush = Brush.verticalGradient(
-                                            colors = listOf(Color(0xFFFB923C), Color(0xFFEA580C))
+                                            colors = listOf(Color(0xFFFB923C), Color(0xFFEA580C), Color(0xFFC2410C))
                                         ),
                                         shape = RoundedCornerShape(16.dp)
                                     )
                                     .border(
                                         width = 2.dp,
-                                        brush = Brush.horizontalGradient(
-                                            listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFFFEDD5), Color(0xFFFDBA74), Color(0xFFFB923C), Color(0xFFC2410C))
                                         ),
                                         shape = RoundedCornerShape(16.dp)
-                                    ),
+                                    )
+                                    .clip(RoundedCornerShape(16.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
+                                // Top Glossy Light Sheen
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(0.48f)
+                                        .align(Alignment.TopCenter)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                            )
+                                        )
+                                )
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -15503,13 +16161,17 @@ fun LevelCompletePopup(
                                         color = Color.White,
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Black,
-                                        fontFamily = LuckiestGuyFontFamily
+                                        fontFamily = LuckiestGuyFontFamily,
+                                        letterSpacing = 0.4.sp,
+                                        style = TextStyle(
+                                            shadow = Shadow(Color(0xFF7C2D12), Offset(1f, 2f), 2f)
+                                        )
                                     )
                                 }
                             }
                         }
 
-                        // QUIT TO MAP Button (3D Red)
+                        // QUIT TO MAP Button (3D Red with Purple Gradient Border)
                         Box(
                             modifier = Modifier
                                 .weight(1f)
@@ -15517,30 +16179,55 @@ fun LevelCompletePopup(
                                 .zoomClickable { onHome() },
                             contentAlignment = Alignment.Center
                         ) {
+                            // Bottom Depth Shadow Underlay
                             Box(
                                 modifier = Modifier
                                     .matchParentSize()
-                                    .offset(y = 3.dp)
-                                    .background(Color(0xFF7F1D1D), RoundedCornerShape(16.dp))
+                                    .offset(y = 3.5.dp)
+                                    .background(Color(0xFF450A0A), RoundedCornerShape(16.dp))
                             )
+                            // 3D Extrusion Bevel Edge
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 1.5.dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color(0xFFDC2626), Color(0xFF991B1B))),
+                                        RoundedCornerShape(16.dp)
+                                    )
+                            )
+                            // Main Shiny Surface
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(
                                         brush = Brush.verticalGradient(
-                                            colors = listOf(Color(0xFFEF4444), Color(0xFFDC2626))
+                                            colors = listOf(Color(0xFFF87171), Color(0xFFEF4444), Color(0xFFB91C1C))
                                         ),
                                         shape = RoundedCornerShape(16.dp)
                                     )
                                     .border(
                                         width = 2.dp,
-                                        brush = Brush.horizontalGradient(
-                                            listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFFEE2E2), Color(0xFFFCA5A5), Color(0xFFEF4444), Color(0xFF991B1B))
                                         ),
                                         shape = RoundedCornerShape(16.dp)
-                                    ),
+                                    )
+                                    .clip(RoundedCornerShape(16.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
+                                // Top Glossy Light Sheen
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(0.48f)
+                                        .align(Alignment.TopCenter)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                            )
+                                        )
+                                )
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -15556,7 +16243,11 @@ fun LevelCompletePopup(
                                         color = Color.White,
                                         fontSize = 13.5.sp,
                                         fontWeight = FontWeight.Black,
-                                        fontFamily = LuckiestGuyFontFamily
+                                        fontFamily = LuckiestGuyFontFamily,
+                                        letterSpacing = 0.4.sp,
+                                        style = TextStyle(
+                                            shadow = Shadow(Color(0xFF450A0A), Offset(1f, 2f), 2f)
+                                        )
                                     )
                                 }
                             }
@@ -15564,6 +16255,7 @@ fun LevelCompletePopup(
                     }
                 }
             }
+        }
 
             // 3 Stars Row centered on the top border
             Row(
@@ -17225,109 +17917,159 @@ fun TamperedProgressScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF080D1A)) // Dark midnight background
             .clickable(enabled = false) {}
-            .padding(20.dp),
-        contentAlignment = Alignment.Center
     ) {
+        // Background Wallpaper
+        Image(
+            painter = painterResource(id = R.drawable.bg),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Subtle contrast overlay
         Box(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .wrapContentHeight(),
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.35f))
+        )
+
+        // Centered Content
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp),
             contentAlignment = Alignment.Center
         ) {
-            // 3D Depth Shadow Underlay
             Box(
                 modifier = Modifier
-                    .matchParentSize()
-                    .offset(y = 5.dp)
-                    .background(Color(0xFF140526), RoundedCornerShape(26.dp))
-            )
-
-            // Main Surface (Soft Purple)
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            listOf(Color(0xF03B1E68), Color(0xF0220E40))
-                        ),
-                        shape = RoundedCornerShape(26.dp)
-                    )
-                    .border(
-                        width = 3.5.dp,
-                        brush = Brush.horizontalGradient(
-                            listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                        ),
-                        shape = RoundedCornerShape(26.dp)
-                    )
-                    .padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 24.dp)
+                    .fillMaxWidth(0.92f)
+                    .wrapContentHeight(),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "TAMPER DETECTED!",
-                    style = TextStyle(
-                        color = Color(0xFFEF4444),
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Black,
-                        fontFamily = LuckiestGuyFontFamily,
-                        letterSpacing = 0.5.sp,
-                        shadow = Shadow(
-                            color = Color(0xFF0F172A),
-                            offset = Offset(2f, 3f),
-                            blurRadius = 4f
-                        )
-                    ),
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(Modifier.height(18.dp))
-
+                // 3D Depth Shadow Underlay
                 Box(
                     modifier = Modifier
-                        .size(92.dp)
-                        .background(Color(0x99180730), RoundedCornerShape(22.dp))
-                        .border(
-                            2.dp,
-                            Brush.horizontalGradient(
-                                listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                            ),
-                            RoundedCornerShape(22.dp)
+                        .matchParentSize()
+                        .offset(y = 6.dp)
+                        .background(Color(0xFF130424), RoundedCornerShape(28.dp))
+                )
+
+                // 3D Extrusion Bevel Edge
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .offset(y = 3.5.dp)
+                        .background(
+                            Brush.verticalGradient(listOf(Color(0xFF9333EA), Color(0xFF581C87))),
+                            RoundedCornerShape(28.dp)
                         )
-                        .padding(12.dp),
-                    contentAlignment = Alignment.Center
+                )
+
+                // Main Card Surface
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            brush = Brush.verticalGradient(
+                                listOf(Color(0xFF381568), Color(0xFF230C44), Color(0xFF16052E))
+                            ),
+                            shape = RoundedCornerShape(28.dp)
+                        )
+                        .border(
+                            width = 3.dp,
+                            brush = Brush.verticalGradient(
+                                listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                            ),
+                            shape = RoundedCornerShape(28.dp)
+                        )
+                        .clip(RoundedCornerShape(28.dp))
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Block,
-                        contentDescription = "Tampering Blocked",
-                        tint = Color(0xFFEF4444),
+                    // Top Gloss Sheen Reflection
+                    Box(
                         modifier = Modifier
-                            .size(54.dp)
-                            .scale(scale)
+                            .fillMaxWidth()
+                            .height(75.dp)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)
+                                )
+                            )
                     )
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 24.dp)
+                    ) {
+                        Text(
+                            text = "TAMPER DETECTED!",
+                            style = TextStyle(
+                                color = Color(0xFFEF4444),
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Black,
+                                fontFamily = LuckiestGuyFontFamily,
+                                letterSpacing = 0.5.sp,
+                                shadow = Shadow(
+                                    color = Color(0xFF0F172A),
+                                    offset = Offset(2f, 3f),
+                                    blurRadius = 4f
+                                )
+                            ),
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(Modifier.height(18.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .size(92.dp)
+                                .background(Color(0x99180730), RoundedCornerShape(22.dp))
+                                .border(
+                                    2.dp,
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                                    ),
+                                    RoundedCornerShape(22.dp)
+                                )
+                                .padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Block,
+                                contentDescription = "Tampering Blocked",
+                                tint = Color(0xFFEF4444),
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .scale(scale)
+                            )
+                        }
+
+                        Spacer(Modifier.height(18.dp))
+
+                        Text(
+                            text = "Security Violation",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Black,
+                            fontFamily = LuckiestGuyFontFamily,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(Modifier.height(6.dp))
+
+                        Text(
+                            text = "Suspicious modification of game data has been detected. For security reasons, gameplay access is restricted. Please reinstall the application to continue.",
+                            color = Color(0xFFCBD5E1),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 18.sp
+                        )
+                    }
                 }
-
-                Spacer(Modifier.height(18.dp))
-
-                Text(
-                    text = "Security Violation",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Black,
-                    fontFamily = LuckiestGuyFontFamily,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(Modifier.height(6.dp))
-
-                Text(
-                    text = "Suspicious modification of game data has been detected. For security reasons, gameplay access is restricted. Please reinstall the application to continue.",
-                    color = Color(0xFF94A3B8),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 18.sp
-                )
             }
         }
     }
@@ -17349,156 +18091,245 @@ fun GenericVpnBlockedScreen(onRetry: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF080D1A)) // Dark midnight background
             .clickable(enabled = false) {}
-            .padding(20.dp),
-        contentAlignment = Alignment.Center
     ) {
+        // Background Wallpaper
+        Image(
+            painter = painterResource(id = R.drawable.bg),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Subtle contrast overlay
         Box(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .wrapContentHeight(),
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.35f))
+        )
+
+        // Centered Content
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp),
             contentAlignment = Alignment.Center
         ) {
-            // 3D Depth Shadow Underlay
             Box(
                 modifier = Modifier
-                    .matchParentSize()
-                    .offset(y = 5.dp)
-                    .background(Color(0xFF140526), RoundedCornerShape(26.dp))
-            )
-
-            // Main Surface (Soft Purple)
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            listOf(Color(0xF03B1E68), Color(0xF0220E40))
-                        ),
-                        shape = RoundedCornerShape(26.dp)
-                    )
-                    .border(
-                        width = 3.5.dp,
-                        brush = Brush.horizontalGradient(
-                            listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                        ),
-                        shape = RoundedCornerShape(26.dp)
-                    )
-                    .padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 24.dp)
+                    .fillMaxWidth(0.92f)
+                    .wrapContentHeight(),
+                contentAlignment = Alignment.Center
             ) {
-                // Header Title
-                Text(
-                    text = "ACCESS BLOCKED!",
-                    style = TextStyle(
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Black,
-                        fontFamily = LuckiestGuyFontFamily,
-                        letterSpacing = 0.5.sp,
-                        shadow = Shadow(
-                            color = Color(0xFF0F172A),
-                            offset = Offset(2f, 3f),
-                            blurRadius = 4f
-                        )
-                    ),
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(Modifier.height(18.dp))
-
-                // Warning Visual Container (Dark Glass)
+                // 3D Depth Shadow Underlay
                 Box(
                     modifier = Modifier
-                        .size(92.dp)
-                        .background(Color(0x99180730), RoundedCornerShape(22.dp))
-                        .border(
-                            2.dp,
-                            Brush.horizontalGradient(
-                                listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                            ),
-                            RoundedCornerShape(22.dp)
+                        .matchParentSize()
+                        .offset(y = 6.dp)
+                        .background(Color(0xFF130424), RoundedCornerShape(28.dp))
+                )
+
+                // 3D Extrusion Bevel Edge
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .offset(y = 3.5.dp)
+                        .background(
+                            Brush.verticalGradient(listOf(Color(0xFF9333EA), Color(0xFF581C87))),
+                            RoundedCornerShape(28.dp)
                         )
-                        .padding(12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = "Warning",
-                        tint = Color(0xFFF59E0B),
-                        modifier = Modifier
-                            .size(54.dp)
-                            .scale(scale)
-                    )
-                }
-
-                Spacer(Modifier.height(18.dp))
-
-                Text(
-                    text = "VPN / Proxy Detected",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Black,
-                    fontFamily = LuckiestGuyFontFamily,
-                    textAlign = TextAlign.Center
                 )
 
-                Spacer(Modifier.height(6.dp))
-
-                Text(
-                    text = "Please disable your VPN, proxy, AdBlocker, or Private DNS configuration to continue using this application.",
-                    color = Color(0xFF94A3B8),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 18.sp
-                )
-
-                Spacer(Modifier.height(24.dp))
-
-                // RETRY Button (3D Emerald Green)
+                // Main Card Surface
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
-                        .zoomClickable {
-                            onRetry()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .offset(y = 3.dp)
-                            .background(Color(0xFF064E3B), RoundedCornerShape(16.dp))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(Color(0xFF4ADE80), Color(0xFF16A34A))
-                                ),
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                            .border(
-                                width = 2.dp,
-                                brush = Brush.horizontalGradient(
-                                    listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                                ),
-                                shape = RoundedCornerShape(16.dp)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                listOf(Color(0xFF381568), Color(0xFF230C44), Color(0xFF16052E))
                             ),
-                        contentAlignment = Alignment.Center
+                            shape = RoundedCornerShape(28.dp)
+                        )
+                        .border(
+                            width = 3.dp,
+                            brush = Brush.verticalGradient(
+                                listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                            ),
+                            shape = RoundedCornerShape(28.dp)
+                        )
+                        .clip(RoundedCornerShape(28.dp))
+                ) {
+                    // Top Gloss Sheen Reflection
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(75.dp)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)
+                                )
+                            )
+                    )
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 24.dp)
                     ) {
+                        // Header Title
                         Text(
-                            text = "RETRY",
+                            text = "ACCESS BLOCKED!",
+                            style = TextStyle(
+                                color = Color.White,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Black,
+                                fontFamily = LuckiestGuyFontFamily,
+                                letterSpacing = 0.5.sp,
+                                shadow = Shadow(
+                                    color = Color(0xFF0F172A),
+                                    offset = Offset(2f, 3f),
+                                    blurRadius = 4f
+                                )
+                            ),
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(Modifier.height(18.dp))
+
+                        // Warning Visual Container (Dark Glass with Purple Gradient Border)
+                        Box(
+                            modifier = Modifier
+                                .size(92.dp)
+                                .background(Color(0x99180730), RoundedCornerShape(22.dp))
+                                .border(
+                                    2.dp,
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                                    ),
+                                    RoundedCornerShape(22.dp)
+                                )
+                                .padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = "Warning",
+                                tint = Color(0xFFF59E0B),
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .scale(scale)
+                            )
+                        }
+
+                        Spacer(Modifier.height(18.dp))
+
+                        Text(
+                            text = "VPN / Proxy Detected",
                             color = Color.White,
-                            fontSize = 17.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Black,
                             fontFamily = LuckiestGuyFontFamily,
-                            letterSpacing = 1.sp
+                            textAlign = TextAlign.Center
                         )
+
+                        Spacer(Modifier.height(6.dp))
+
+                        Text(
+                            text = "Please disable your VPN, proxy, AdBlocker, or Private DNS configuration to continue using this application.",
+                            color = Color(0xFFCBD5E1),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 18.sp
+                        )
+
+                        Spacer(Modifier.height(24.dp))
+
+                        // RETRY Button (4-Layer 3D Emerald Green Hero Button with Purple Gradient Border)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp)
+                                .zoomClickable {
+                                    onRetry()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Bottom Depth Shadow Underlay
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 4.5.dp)
+                                    .background(Color(0xFF042F2C), RoundedCornerShape(18.dp))
+                            )
+                            // 3D Extrusion Bevel Edge
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .offset(y = 2.dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color(0xFF059669), Color(0xFF064E3B))),
+                                        RoundedCornerShape(18.dp)
+                                    )
+                            )
+                            // Main Shiny Surface
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color(0xFF34D399), Color(0xFF10B981), Color(0xFF047857))
+                                        ),
+                                        shape = RoundedCornerShape(18.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFD1FAE5), Color(0xFF6EE7B7), Color(0xFF10B981), Color(0xFF047857))
+                                        ),
+                                        shape = RoundedCornerShape(18.dp)
+                                    )
+                                    .clip(RoundedCornerShape(18.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                // Top Glossy Light Sheen
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(0.48f)
+                                        .align(Alignment.TopCenter)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                            )
+                                        )
+                                    )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "Retry",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Text(
+                                        text = "RETRY",
+                                        color = Color.White,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Black,
+                                        fontFamily = LuckiestGuyFontFamily,
+                                        letterSpacing = 0.8.sp,
+                                        style = TextStyle(
+                                            shadow = Shadow(Color(0xFF022C22), Offset(1f, 2f), 2f)
+                                        )
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -17511,31 +18342,42 @@ fun StepItem(stepNumber: String, text: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFFE0F2FE), RoundedCornerShape(16.dp))
-            .border(1.dp, Color(0xFFBAE6FD), RoundedCornerShape(16.dp))
-            .padding(16.dp),
+            .background(Color(0xCC150729), RoundedCornerShape(16.dp))
+            .border(
+                1.5.dp,
+                Brush.verticalGradient(
+                    listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                ),
+                RoundedCornerShape(16.dp)
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(32.dp)
-                .background(Color(0xFF00A2FF), CircleShape),
+                .size(34.dp)
+                .background(
+                    Brush.verticalGradient(listOf(Color(0xFF38BDF8), Color(0xFF0284C7))),
+                    CircleShape
+                )
+                .border(1.5.dp, Color.White.copy(alpha = 0.6f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = stepNumber,
                 color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
+                fontWeight = FontWeight.Black,
+                fontSize = 15.sp,
                 fontFamily = LuckiestGuyFontFamily
             )
         }
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(12.dp))
         Text(
             text = text,
-            color = Color(0xFF262F3C),
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold
+            color = Color.White,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 17.sp
         )
     }
 }
@@ -17546,58 +18388,306 @@ fun ImportantTaskPopup(
     onInstallClick: () -> Unit,
     onCancel: () -> Unit
 ) {
-    FullScreenPopupContainer(
-        gradientColors = emptyList(),
-        cardColor = Color(0xFFEAF8FF),
-        borderColor = Color(0xFF00508F)
+    BackHandler { onCancel() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.75f))
+            .padding(20.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "IMPORTANT TASK",
-            style = TextStyle(
-                color = Color(0xFF00A2FF),
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = LuckiestGuyFontFamily,
-                shadow = Shadow(
-                    color = Color(0xFF002D54),
-                    offset = Offset(2f, 4f),
-                    blurRadius = 2f
-                )
-            )
-        )
-        Spacer(Modifier.height(16.dp))
-        Icon(
-            imageVector = Icons.Default.Info,
-            contentDescription = null,
-            tint = Color(0xFF00A2FF),
-            modifier = Modifier.size(56.dp)
-        )
-        Spacer(Modifier.height(24.dp))
-        
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.94f)
+                .wrapContentHeight(),
+            contentAlignment = Alignment.Center
         ) {
-            StepItem(stepNumber = "1", text = "Click 'Install & Unlock' below.")
-            StepItem(stepNumber = "2", text = "Install the app shown in the ad.")
-            StepItem(stepNumber = "3", text = "Open the app & use it for at least 1 minute to unlock!")
+            // 3D Depth Shadow Underlay
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(y = 6.dp)
+                    .background(Color(0xFF130424), RoundedCornerShape(28.dp))
+            )
+
+            // 3D Extrusion Bevel Edge
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(y = 3.5.dp)
+                    .background(
+                        Brush.verticalGradient(listOf(Color(0xFF9333EA), Color(0xFF581C87))),
+                        RoundedCornerShape(28.dp)
+                    )
+            )
+
+            // Main Card Surface
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            listOf(Color(0xFF381568), Color(0xFF230C44), Color(0xFF16052E))
+                        ),
+                        shape = RoundedCornerShape(28.dp)
+                    )
+                    .border(
+                        width = 3.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                        ),
+                        shape = RoundedCornerShape(28.dp)
+                    )
+                    .clip(RoundedCornerShape(28.dp))
+            ) {
+                // Top Gloss Sheen Reflection
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(75.dp)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)
+                            )
+                        )
+                )
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 24.dp)
+                ) {
+                    // Header Badge & Title
+                    Text(
+                        text = "IMPORTANT TASK!",
+                        style = TextStyle(
+                            color = Color(0xFFFFD54F),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Black,
+                            fontFamily = LuckiestGuyFontFamily,
+                            letterSpacing = 0.5.sp,
+                            shadow = Shadow(
+                                color = Color(0xFF0F172A),
+                                offset = Offset(2f, 3f),
+                                blurRadius = 4f
+                            )
+                        ),
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(14.dp))
+
+                    // Info Icon Badge
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(Color(0x99180730), RoundedCornerShape(20.dp))
+                            .border(
+                                2.dp,
+                                Brush.verticalGradient(
+                                    listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                                ),
+                                RoundedCornerShape(20.dp)
+                            )
+                            .padding(10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Info",
+                            tint = Color(0xFF38BDF8),
+                            modifier = Modifier.size(44.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        StepItem(stepNumber = "1", text = "Click 'INSTALL & UNLOCK' below.")
+                        StepItem(stepNumber = "2", text = "Install the app shown in the ad (${if (requiredMb > 0) "$requiredMb MB+" else "full app"}).")
+                        StepItem(stepNumber = "3", text = "Open & use the app for at least 1 minute to unlock!")
+                    }
+
+                    Spacer(Modifier.height(22.dp))
+
+                    // INSTALL & UNLOCK Button (4-Layer 3D Emerald Green Hero Button with Purple Gradient Border)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp)
+                            .bouncyClickable {
+                                onInstallClick()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Bottom Depth Shadow Underlay
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(y = 4.5.dp)
+                                .background(Color(0xFF042F2C), RoundedCornerShape(18.dp))
+                        )
+                        // 3D Extrusion Bevel Edge
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(y = 2.dp)
+                                .background(
+                                    Brush.verticalGradient(listOf(Color(0xFF059669), Color(0xFF064E3B))),
+                                    RoundedCornerShape(18.dp)
+                                )
+                        )
+                        // Main Shiny Surface
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(Color(0xFF34D399), Color(0xFF10B981), Color(0xFF047857))
+                                    ),
+                                    shape = RoundedCornerShape(18.dp)
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    brush = Brush.verticalGradient(
+                                        listOf(Color(0xFFD1FAE5), Color(0xFF6EE7B7), Color(0xFF10B981), Color(0xFF047857))
+                                    ),
+                                    shape = RoundedCornerShape(18.dp)
+                                )
+                                .clip(RoundedCornerShape(18.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Top Glossy Light Sheen
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(0.48f)
+                                    .align(Alignment.TopCenter)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                        )
+                                    )
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CloudDownload,
+                                    contentDescription = "Install",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Text(
+                                    text = "INSTALL & UNLOCK",
+                                    color = Color.White,
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Black,
+                                    fontFamily = LuckiestGuyFontFamily,
+                                    letterSpacing = 0.8.sp,
+                                    style = TextStyle(
+                                        shadow = Shadow(Color(0xFF022C22), Offset(1f, 2f), 2f)
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+
+                    // CANCEL Button (4-Layer 3D Crimson Red Button with Red Gradient Border)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
+                            .bouncyClickable {
+                                onCancel()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Bottom Depth Shadow Underlay
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(y = 3.5.dp)
+                                .background(Color(0xFF450A0A), RoundedCornerShape(16.dp))
+                        )
+                        // 3D Extrusion Bevel Edge
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(y = 1.5.dp)
+                                .background(
+                                    Brush.verticalGradient(listOf(Color(0xFFDC2626), Color(0xFF991B1B))),
+                                    RoundedCornerShape(16.dp)
+                                )
+                        )
+                        // Main Shiny Surface
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(Color(0xFFF87171), Color(0xFFEF4444), Color(0xFFB91C1C))
+                                    ),
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    brush = Brush.verticalGradient(
+                                        listOf(Color(0xFFFEE2E2), Color(0xFFFCA5A5), Color(0xFFEF4444), Color(0xFF991B1B))
+                                    ),
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .clip(RoundedCornerShape(16.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Top Glossy Light Sheen
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(0.48f)
+                                    .align(Alignment.TopCenter)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                        )
+                                    )
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Cancel",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "CANCEL",
+                                    color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Black,
+                                    fontFamily = LuckiestGuyFontFamily,
+                                    letterSpacing = 0.8.sp,
+                                    style = TextStyle(
+                                        shadow = Shadow(Color(0xFF3F0B0B), Offset(1f, 2f), 2f)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
-        
-        Spacer(Modifier.height(48.dp))
-        PopupThreeDButton(
-            text = "Install & Unlock 📥",
-            onClick = onInstallClick,
-            baseColor = VibrantGreen,
-            isLarge = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(Modifier.height(16.dp))
-        PopupThreeDButton(
-            text = "Cancel",
-            onClick = onCancel,
-            baseColor = Color(0xFF94A3B8),
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }
 
@@ -17606,48 +18696,218 @@ fun TaskFailedPopup(
     requiredMb: Int,
     onOkay: () -> Unit
 ) {
-    FullScreenPopupContainer(
-        gradientColors = emptyList(),
-        cardColor = Color(0xFFFFEBEB),
-        borderColor = Color(0xFFB91C1C)
+    BackHandler { onOkay() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.75f))
+            .padding(20.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "TASK FAILED!",
-            style = TextStyle(
-                color = Color(0xFFFF5E3A),
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = LuckiestGuyFontFamily,
-                shadow = Shadow(
-                    color = Color(0xFF7F1D1D),
-                    offset = Offset(2f, 4f),
-                    blurRadius = 2f
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.94f)
+                .wrapContentHeight(),
+            contentAlignment = Alignment.Center
+        ) {
+            // 3D Depth Shadow Underlay
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(y = 6.dp)
+                    .background(Color(0xFF130424), RoundedCornerShape(28.dp))
+            )
+
+            // 3D Extrusion Bevel Edge
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(y = 3.5.dp)
+                .background(
+                    Brush.verticalGradient(listOf(Color(0xFF9333EA), Color(0xFF581C87))),
+                    RoundedCornerShape(28.dp)
                 )
             )
-        )
-        Spacer(Modifier.height(24.dp))
-        Icon(
-            imageVector = Icons.Default.Close,
-            contentDescription = null,
-            tint = Color(0xFFFF5E3A),
-            modifier = Modifier.size(64.dp)
-        )
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = "The promoted app was not installed or opened. Please try again to unlock your level.",
-            color = Color(0xFF262F3C),
-            textAlign = TextAlign.Center,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(Modifier.height(48.dp))
-        PopupThreeDButton(
-            text = "Okay",
-            onClick = onOkay,
-            baseColor = SunsetOrange,
-            isLarge = true,
-            modifier = Modifier.fillMaxWidth()
-        )
+
+            // Main Card Surface
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            listOf(Color(0xFF381568), Color(0xFF230C44), Color(0xFF16052E))
+                        ),
+                        shape = RoundedCornerShape(28.dp)
+                    )
+                    .border(
+                        width = 3.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                        ),
+                        shape = RoundedCornerShape(28.dp)
+                    )
+                    .clip(RoundedCornerShape(28.dp))
+            ) {
+                // Top Gloss Sheen Reflection
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(75.dp)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)
+                            )
+                        )
+                )
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 24.dp)
+                ) {
+                    Text(
+                        text = "TASK FAILED!",
+                        style = TextStyle(
+                            color = Color(0xFFEF4444),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Black,
+                            fontFamily = LuckiestGuyFontFamily,
+                            letterSpacing = 0.5.sp,
+                            shadow = Shadow(
+                                color = Color(0xFF0F172A),
+                                offset = Offset(2f, 3f),
+                                blurRadius = 4f
+                            )
+                        ),
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .size(76.dp)
+                            .background(Color(0x99180730), RoundedCornerShape(20.dp))
+                            .border(
+                                2.dp,
+                                Brush.verticalGradient(
+                                    listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
+                                ),
+                                RoundedCornerShape(20.dp)
+                            )
+                            .padding(10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = null,
+                            tint = Color(0xFFEF4444),
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Text(
+                        text = "The promoted app was not installed or opened. Please install and try again to unlock your level.",
+                        color = Color(0xFFCBD5E1),
+                        textAlign = TextAlign.Center,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 20.sp
+                    )
+
+                    Spacer(Modifier.height(24.dp))
+
+                    // OKAY Button (4-Layer 3D Sunset Orange Hero Button with Orange Gradient Border)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .bouncyClickable {
+                                onOkay()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Bottom Depth Shadow Underlay
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(y = 4.dp)
+                                .background(Color(0xFF7C2D12), RoundedCornerShape(18.dp))
+                        )
+                        // 3D Extrusion Bevel Edge
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(y = 2.dp)
+                                .background(
+                                    Brush.verticalGradient(listOf(Color(0xFFEA580C), Color(0xFF9A3412))),
+                                    RoundedCornerShape(18.dp)
+                                )
+                        )
+                        // Main Shiny Surface
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(Color(0xFFFB923C), Color(0xFFF97316), Color(0xFFEA580C))
+                                    ),
+                                    shape = RoundedCornerShape(18.dp)
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    brush = Brush.verticalGradient(
+                                        listOf(Color(0xFFFFEDD5), Color(0xFFFDBA74), Color(0xFFFB923C), Color(0xFFC2410C))
+                                    ),
+                                    shape = RoundedCornerShape(18.dp)
+                                )
+                                .clip(RoundedCornerShape(18.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Top Glossy Light Sheen
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(0.48f)
+                                    .align(Alignment.TopCenter)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f), Color.Transparent)
+                                        )
+                                    )
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Okay",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Text(
+                                    text = "TRY AGAIN",
+                                    color = Color.White,
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Black,
+                                    fontFamily = LuckiestGuyFontFamily,
+                                    letterSpacing = 0.8.sp,
+                                    style = TextStyle(
+                                        shadow = Shadow(Color(0xFF7C2D12), Offset(1f, 2f), 2f)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -17662,6 +18922,15 @@ fun NoInternetScreen(onRetry: () -> Unit) {
             repeatMode = RepeatMode.Reverse
         ),
         label = "scale"
+    )
+    val btnPulse by infiniteTransition.animateFloat(
+        initialValue = 0.97f,
+        targetValue = 1.03f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "btnPulse"
     )
 
     Box(
@@ -17682,141 +18951,222 @@ fun NoInternetScreen(onRetry: () -> Unit) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .offset(y = 5.dp)
-                    .background(Color(0xFF140526), RoundedCornerShape(26.dp))
+                    .offset(y = 6.dp)
+                    .background(Color(0xFF130424), RoundedCornerShape(28.dp))
             )
 
-            // Main Surface (Soft Purple)
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
+            // 3D Extrusion Bevel Edge
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(y = 3.5.dp)
+                    .background(
+                        Brush.verticalGradient(listOf(Color(0xFF9333EA), Color(0xFF581C87))),
+                        RoundedCornerShape(28.dp)
+                    )
+            )
+
+            // Main Surface
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
                         brush = Brush.verticalGradient(
-                            listOf(Color(0xF03B1E68), Color(0xF0220E40))
+                            listOf(Color(0xFF381568), Color(0xFF230C44), Color(0xFF16052E))
                         ),
-                        shape = RoundedCornerShape(26.dp)
+                        shape = RoundedCornerShape(28.dp)
                     )
                     .border(
-                        width = 3.5.dp,
-                        brush = Brush.horizontalGradient(
-                            listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
+                        width = 3.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(Color(0xFFF5D0FE), Color(0xFFE879F9), Color(0xFFC026D3), Color(0xFF7E22CE))
                         ),
-                        shape = RoundedCornerShape(26.dp)
+                        shape = RoundedCornerShape(28.dp)
                     )
-                    .padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 24.dp)
+                    .clip(RoundedCornerShape(28.dp))
             ) {
-                // Header Title
-                Text(
-                    text = "NO CONNECTION!",
-                    style = TextStyle(
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Black,
-                        fontFamily = LuckiestGuyFontFamily,
-                        letterSpacing = 0.5.sp,
-                        shadow = Shadow(
-                            color = Color(0xFF0F172A),
-                            offset = Offset(2f, 3f),
-                            blurRadius = 4f
-                        )
-                    ),
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(Modifier.height(18.dp))
-
-                // Warning / No-Internet Visual Container (Dark Glass)
-                Box(
-                    modifier = Modifier
-                        .size(92.dp)
-                        .background(Color(0x99180730), RoundedCornerShape(22.dp))
-                        .border(
-                            2.dp,
-                            Brush.horizontalGradient(
-                                listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                            ),
-                            RoundedCornerShape(22.dp)
-                        )
-                        .padding(12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = "No Internet Warning",
-                        tint = Color(0xFFF59E0B),
-                        modifier = Modifier
-                            .size(54.dp)
-                            .scale(scale)
-                    )
-                }
-
-                Spacer(Modifier.height(18.dp))
-
-                Text(
-                    text = "No Internet Connection",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Black,
-                    fontFamily = LuckiestGuyFontFamily,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(Modifier.height(6.dp))
-
-                Text(
-                    text = "Please check your internet connection to continue playing and claiming rewards.",
-                    color = Color(0xFF94A3B8),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 18.sp
-                )
-
-                Spacer(Modifier.height(24.dp))
-
-                // RETRY Button (3D Emerald Green)
+                // Top Gloss Sheen Reflection
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
-                        .zoomClickable {
-                            onRetry()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .offset(y = 3.dp)
-                            .background(Color(0xFF064E3B), RoundedCornerShape(16.dp))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(Color(0xFF4ADE80), Color(0xFF16A34A))
-                                ),
-                                shape = RoundedCornerShape(16.dp)
+                        .height(75.dp)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)
                             )
-                            .border(
-                                width = 2.dp,
-                                brush = Brush.horizontalGradient(
-                                    listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
-                                ),
-                                shape = RoundedCornerShape(16.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "RETRY",
+                        )
+                )
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 24.dp)
+                ) {
+                    // Header Title
+                    Text(
+                        text = "NO CONNECTION!",
+                        style = TextStyle(
                             color = Color.White,
-                            fontSize = 17.sp,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Black,
                             fontFamily = LuckiestGuyFontFamily,
-                            letterSpacing = 1.sp
+                            letterSpacing = 0.5.sp,
+                            shadow = Shadow(
+                                color = Color(0xFF0F172A),
+                                offset = Offset(2f, 3f),
+                                blurRadius = 4f
+                            )
+                        ),
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(18.dp))
+
+                    // Warning / No-Internet Visual Container (Dark Glass)
+                    Box(
+                        modifier = Modifier
+                            .size(92.dp)
+                            .background(Color(0x99180730), RoundedCornerShape(22.dp))
+                            .border(
+                                2.dp,
+                                Brush.horizontalGradient(
+                                    listOf(Color(0xFFFFEA79), Color(0xFFFFB300), Color(0xFFD97706))
+                                ),
+                                RoundedCornerShape(22.dp)
+                            )
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "No Internet Warning",
+                            tint = Color(0xFFF59E0B),
+                            modifier = Modifier
+                                .size(54.dp)
+                                .scale(scale)
                         )
+                    }
+
+                    Spacer(Modifier.height(18.dp))
+
+                    Text(
+                        text = "No Internet Connection",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                        fontFamily = LuckiestGuyFontFamily,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(6.dp))
+
+                    Text(
+                        text = "Please check your internet connection to continue playing and claiming rewards.",
+                        color = Color(0xFFCBD5E1),
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 18.sp
+                    )
+
+                    Spacer(Modifier.height(24.dp))
+
+                    // RETRY Button (3D Premium Arcade Action Button)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .scale(btnPulse)
+                            .zoomClickable {
+                                onRetry()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // 3D Deep Base Shadow
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(y = 4.5.dp)
+                                .background(Color(0xFF042F2C), RoundedCornerShape(18.dp))
+                        )
+                        // 3D Bevel Extrusion Layer
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .offset(y = 2.5.dp)
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFF059669), Color(0xFF064E3B))
+                                    ),
+                                    RoundedCornerShape(18.dp)
+                                )
+                        )
+                        // Main Button Surface
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(Color(0xFF34D399), Color(0xFF10B981), Color(0xFF047857))
+                                    ),
+                                    shape = RoundedCornerShape(18.dp)
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    brush = Brush.verticalGradient(
+                                        listOf(Color(0xFFD1FAE5), Color(0xFF6EE7B7), Color(0xFF10B981), Color(0xFF047857))
+                                    ),
+                                    shape = RoundedCornerShape(18.dp)
+                                )
+                                .clip(RoundedCornerShape(18.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Button Top Gloss Sheen
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(0.48f)
+                                    .align(Alignment.TopCenter)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                Color.White.copy(alpha = 0.45f),
+                                                Color.White.copy(alpha = 0.10f),
+                                                Color.Transparent
+                                            )
+                                        )
+                                    )
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Retry",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "RETRY",
+                                    style = TextStyle(
+                                        color = Color.White,
+                                        fontSize = 19.sp,
+                                        fontWeight = FontWeight.Black,
+                                        fontFamily = LuckiestGuyFontFamily,
+                                        letterSpacing = 1.2.sp,
+                                        shadow = Shadow(
+                                            color = Color(0xFF022C22),
+                                            offset = Offset(2f, 3f),
+                                            blurRadius = 3f
+                                        )
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             }

@@ -1,6 +1,6 @@
 -- ========================================================
 -- ColorLinker Complete Production Database SQL Dump
--- Database: colorlinker
+-- Database: Colorlinker
 -- Package: com.colorlinker.puzzle
 -- ========================================================
 
@@ -62,15 +62,15 @@ ON DUPLICATE KEY UPDATE screen_key=screen_key;
 -- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `app_settings` (
   `id` INT PRIMARY KEY,
-  `topon_app_id` VARCHAR(100) NOT NULL DEFAULT 'h6abf939ee7d84',
-  `topon_app_key` VARCHAR(100) NOT NULL DEFAULT 'a174dbc40be220647879d701c773493f7',
+  `topon_app_id` VARCHAR(100) NOT NULL DEFAULT 'h6abde08eeb9b1',
+  `topon_app_key` VARCHAR(100) NOT NULL DEFAULT 'a8ef1041e8327ba1d5afd764e38eb3361',
   `topon_splash_id` VARCHAR(100) NOT NULL DEFAULT 'b6a6dcd4790001',
-  `topon_interstitial_id` VARCHAR(100) NOT NULL DEFAULT 'n6abf9442e8673',
-  `topon_rewarded_id` VARCHAR(100) NOT NULL DEFAULT 'n6abf9427b3f3f',
-  `topon_native_id` VARCHAR(100) NOT NULL DEFAULT 'n6abf93fa45aa7',
-  `interstitial_id` VARCHAR(255) DEFAULT 'n6abf9442e8673',
-  `native_id` VARCHAR(255) DEFAULT 'n6abf93fa45aa7',
-  `rewarded_id` VARCHAR(255) DEFAULT 'n6abf9427b3f3f',
+  `topon_interstitial_id` VARCHAR(100) NOT NULL DEFAULT 'n6abde0e7d1611',
+  `topon_rewarded_id` VARCHAR(100) NOT NULL DEFAULT 'n6abde0c69ffea',
+  `topon_native_id` VARCHAR(100) NOT NULL DEFAULT 'n6abde0ade79f1',
+  `interstitial_id` VARCHAR(255) DEFAULT 'n6abde0e7d1611',
+  `native_id` VARCHAR(255) DEFAULT 'n6abde0ade79f1',
+  `rewarded_id` VARCHAR(255) DEFAULT 'n6abde0c69ffea',
   `onesignal_app_id` VARCHAR(255) NOT NULL DEFAULT '',
   `onesignal_rest_api_key` TEXT NULL,
   `native_enabled` TINYINT(1) DEFAULT 1,
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS `app_settings` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO `app_settings` (`id`, `topon_app_id`, `topon_app_key`, `topon_splash_id`, `topon_interstitial_id`, `topon_rewarded_id`, `topon_native_id`, `interstitial_id`, `native_id`, `rewarded_id`, `native_enabled`, `daily_refresh`, `update_url`, `update_version`, `update_status`, `rewards_enabled`) 
-VALUES (1, 'h6abf939ee7d84', 'a174dbc40be220647879d701c773493f7', 'b6a6dcd4790001', 'n6abf9442e8673', 'n6abf9427b3f3f', 'n6abf93fa45aa7', 'n6abf9442e8673', 'n6abf93fa45aa7', 'n6abf9427b3f3f', 1, 1, 'https://play.google.com/store/apps/details?id=com.colorlinker.puzzle', '1.0', 0, 1)
+VALUES (1, 'h6abde08eeb9b1', 'a8ef1041e8327ba1d5afd764e38eb3361', 'b6a6dcd4790001', 'n6abde0e7d1611', 'n6abde0c69ffea', 'n6abde0ade79f1', 'n6abde0e7d1611', 'n6abde0ade79f1', 'n6abde0c69ffea', 1, 1, 'https://play.google.com/store/apps/details?id=com.colorlinker.puzzle', '1.0', 0, 1)
 ON DUPLICATE KEY UPDATE id=id;
 
 -- --------------------------------------------------------
@@ -278,7 +278,7 @@ CREATE TABLE IF NOT EXISTS `tester_day_configs` (
 
 INSERT INTO `tester_day_configs` (`day_number`, `required_levels`, `title`, `instructions`, `status`) VALUES
 (1, 10, 'Day 1: Beginners Puzzle Test', 'Complete 10 levels and report any initial bugs.', 1),
-(2, 10, 'Day 2: ColorLinker Mechanics Test', 'Complete 10 levels testing speed and touch responsiveness.', 1),
+(2, 10, 'Day 2: Pipe Puzzle Mechanics Test', 'Complete 10 levels testing speed and touch responsiveness.', 1),
 (3, 10, 'Day 3: Combo Release Test', 'Complete 10 levels testing obstacle clearing.', 1),
 (4, 10, 'Day 4: Grid Untangle Test', 'Complete 10 levels testing large mazes.', 1),
 (5, 10, 'Day 5: Performance & Ad Flow', 'Complete 10 levels testing smooth transitions.', 1),

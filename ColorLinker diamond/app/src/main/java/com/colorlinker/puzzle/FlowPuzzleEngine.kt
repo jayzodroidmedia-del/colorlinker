@@ -1,4 +1,4 @@
-﻿package com.colorlinker.puzzle
+package com.colorlinker.puzzle
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -21,14 +21,6 @@ import androidx.compose.ui.unit.dp
 import java.util.Random
 import kotlin.math.abs
 
-enum class BoardShape(val displayName: String) {
-    CLASSIC("Classic Square"),
-    DONUT("Donut Ring"),
-    CROSS("Plus Cross"),
-    DIAMOND("Diamond Octagon"),
-    L_SHAPE("L-Corridor")
-}
-
 data class FlowPoint(val row: Int, val col: Int)
 
 data class FlowColorPair(
@@ -36,61 +28,99 @@ data class FlowColorPair(
     val color: Color,
     val darkGlow: Color,
     val name: String,
-    val dots: List<FlowPoint>,
+    val p1: FlowPoint,
+    val p2: FlowPoint, // Middle 2nd Dot
+    val p3: FlowPoint, // Ending 3rd Dot
     val solution: List<FlowPoint>
 ) {
-    val p1: FlowPoint get() = dots.first()
-    val p2: FlowPoint get() = dots.last()
+    val dots: List<FlowPoint> get() = listOf(p1, p2, p3)
 }
 
 data class FlowLevel(
     val level: Int,
     val gridSize: Int,
     val pairs: List<FlowColorPair>,
-    val blockedCells: Set<FlowPoint> = emptySet(),
-    val shapeVoids: Set<FlowPoint> = emptySet(),
-    val shape: BoardShape = BoardShape.CLASSIC
-)
+    val obstacles: List<FlowPoint> = emptyList(),
+    val voidCells: Set<FlowPoint> = emptySet(),
+    val shapeName: String = "Classic"
+) {
+    val blockedCells: List<FlowPoint> get() = obstacles
+    val shapeVoids: Set<FlowPoint> get() = voidCells
+}
+
+enum class BoardShapeType(val displayName: String) {
+    SQUARE("Classic"),
+    CROSS("Plus Cross"),
+    DONUT("Donut Ring"),
+    DOUBLE_DONUT("Figure-8"),
+    DIAMOND("Diamond"),
+    SWISS_CHEESE("Swiss Lattice"),
+    U_SHAPE("Horseshoe"),
+    T_SHAPE("T-Corridor"),
+    PINWHEEL("Pinwheel Maze"),
+    HOURGLASS("Hourglass"),
+    L_SHAPE("L-Corner"),
+    STAIRCASE("Staircase")
+}
 
 object FlowPuzzleLevels {
+    // 12 COMPLETELY DISTINCT, HIGH-CONTRAST COLORS (Zero Color Confusion)
     private val COLOR_PALETTE = listOf(
-        Pair(Color(0xFF0055FF), Color(0xFF002288)), // 1. Blue
-        Pair(Color(0xFFFF0000), Color(0xFF880000)), // 2. Red
-        Pair(Color(0xFFFFE500), Color(0xFF887700)), // 3. Yellow
-        Pair(Color(0xFFFF8800), Color(0xFF884400)), // 4. Orange
-        Pair(Color(0xFF00AA22), Color(0xFF004411)), // 5. Green
-        Pair(Color(0xFF00D2D3), Color(0xFF005555)), // 6. Cyan
-        Pair(Color(0xFFA55EEA), Color(0xFF4B1B7A)), // 7. Purple
-        Pair(Color(0xFFFF5252), Color(0xFF7A1B1B)), // 8. Pink
-        Pair(Color(0xFF26DE81), Color(0xFF105A32)), // 9. Mint
-        Pair(Color(0xFFFD9644), Color(0xFF6B3A10)), // 10. Amber
-        Pair(Color(0xFF45AAF2), Color(0xFF1B4E75)), // 11. Sky Blue
-        Pair(Color(0xFFE056FD), Color(0xFF5D1E6E))  // 12. Lavender
+        Pair(Color(0xFFE50914), Color(0xFF800000)), // 1. Pure Bright Red
+        Pair(Color(0xFF0066FF), Color(0xFF002288)), // 2. Royal Blue
+        Pair(Color(0xFFFFEA00), Color(0xFF8A7A00)), // 3. Bright Yellow
+        Pair(Color(0xFF00E676), Color(0xFF006020)), // 4. Emerald Green
+        Pair(Color(0xFFFF6D00), Color(0xFF903000)), // 5. Tangerine Orange
+        Pair(Color(0xFF00E5FF), Color(0xFF006080)), // 6. Electric Cyan
+        Pair(Color(0xFFA855F7), Color(0xFF4C1D95)), // 7. Electric Purple
+        Pair(Color(0xFFFF1493), Color(0xFF880044)), // 8. Neon Hot Magenta (Pink)
+        Pair(Color(0xFFF1F5F9), Color(0xFF64748B)), // 9. Pure White Ice
+        Pair(Color(0xFF8D6E63), Color(0xFF3E2723)), // 10. Chocolate Brown
+        Pair(Color(0xFF76FF03), Color(0xFF336600)), // 11. Neon Lime
+        Pair(Color(0xFF00B4D8), Color(0xFF004466))  // 12. Deep Ocean Blue
     )
 
     private val COLOR_NAMES = listOf(
-        "Blue", "Red", "Yellow", "Orange", "Green",
-        "Cyan", "Purple", "Pink", "Mint", "Amber", "SkyBlue", "Lavender"
+        "Red", "Blue", "Yellow", "Green", "Orange", "Cyan",
+        "Purple", "Pink", "White", "Brown", "Lime", "Ocean"
     )
 
-    fun getShapeMask(gridSize: Int, shape: BoardShape): Set<FlowPoint> {
+    private fun getBoardShapeAndVoids(level: Int, gridSize: Int): Pair<BoardShapeType, Set<FlowPoint>> {
+        if (level == 1) {
+            return Pair(BoardShapeType.SQUARE, emptySet())
+        }
+
+        // Highly diverse mixed rotation schedule for maximum complexity and variation
+        val shapePattern = listOf(
+            BoardShapeType.SQUARE,        // L1 / L13: Classic Full Square
+            BoardShapeType.CROSS,         // L2 / L14: Plus (+) Cross
+            BoardShapeType.SQUARE,        // L3 / L15: Classic Full Square
+            BoardShapeType.DONUT,         // L4 / L16: Donut Ring (Center Blank Void)
+            BoardShapeType.DOUBLE_DONUT,  // L5 / L17: Figure-8 Double Void
+            BoardShapeType.DIAMOND,       // L6 / L18: Diamond Octagon Cutout
+            BoardShapeType.SQUARE,        // L7 / L19: Classic Full Square
+            BoardShapeType.SWISS_CHEESE,  // L8 / L20: Swiss Lattice Multi-Hole
+            BoardShapeType.U_SHAPE,       // L9 / L21: Horseshoe / U-Shape
+            BoardShapeType.PINWHEEL,      // L10 / L22: Pinwheel Maze
+            BoardShapeType.HOURGLASS,     // L11 / L23: Hourglass / Butterfly
+            BoardShapeType.SQUARE,        // L12 / L24: Classic Full Square
+            BoardShapeType.T_SHAPE,       // L13 / L25: T-Shape
+            BoardShapeType.L_SHAPE,       // L14 / L26: L-Shape
+            BoardShapeType.STAIRCASE      // L15 / L27: Stepped Staircase
+        )
+
+        val shapeType = shapePattern[(level - 1) % shapePattern.size]
         val voids = mutableSetOf<FlowPoint>()
-        when (shape) {
-            BoardShape.DONUT -> {
-                // Cut out center hole (1x1 on 5x5, 2x2 on 6x6+)
-                val holeSize = if (gridSize <= 5) 1 else 2
-                val start = (gridSize - holeSize) / 2
-                for (r in start until start + holeSize) {
-                    for (c in start until start + holeSize) {
-                        voids.add(FlowPoint(r, c))
-                    }
-                }
+
+        when (shapeType) {
+            BoardShapeType.SQUARE -> {
+                // No voids (Full playable grid)
             }
-            BoardShape.CROSS -> {
-                // Cut out 4 corners to form a Plus/Cross shape
-                val cornerCut = if (gridSize <= 5) 1 else (gridSize / 3)
-                for (r in 0 until cornerCut) {
-                    for (c in 0 until cornerCut) {
+            BoardShapeType.CROSS -> {
+                // Cut corners to make a Plus (+) Cross
+                val cut = if (gridSize <= 6) 1 else 2
+                for (r in 0 until cut) {
+                    for (c in 0 until cut) {
                         voids.add(FlowPoint(r, c)) // Top-Left
                         voids.add(FlowPoint(r, gridSize - 1 - c)) // Top-Right
                         voids.add(FlowPoint(gridSize - 1 - r, c)) // Bottom-Left
@@ -98,167 +128,347 @@ object FlowPuzzleLevels {
                     }
                 }
             }
-            BoardShape.DIAMOND -> {
-                // Cut off diagonal corners to create diamond/octagon shape
-                val cutLimit = if (gridSize <= 5) 1 else 2
+            BoardShapeType.DONUT -> {
+                // Hollow Center Hole (Donut Ring)
+                if (gridSize >= 7) {
+                    for (r in 2..(gridSize - 3)) {
+                        for (c in 2..(gridSize - 3)) {
+                            voids.add(FlowPoint(r, c))
+                        }
+                    }
+                } else if (gridSize == 6) {
+                    for (r in 2..3) {
+                        for (c in 2..3) {
+                            voids.add(FlowPoint(r, c))
+                        }
+                    }
+                } else {
+                    voids.add(FlowPoint(2, 2))
+                }
+            }
+            BoardShapeType.DOUBLE_DONUT -> {
+                // Figure-8: Two distinct center holes creating a central bridge corridor
+                if (gridSize >= 7) {
+                    val mid = gridSize / 2
+                    voids.add(FlowPoint(2, mid))
+                    voids.add(FlowPoint(gridSize - 3, mid))
+                    if (gridSize >= 8) {
+                        voids.add(FlowPoint(2, mid - 1))
+                        voids.add(FlowPoint(gridSize - 3, mid - 1))
+                    }
+                } else {
+                    voids.add(FlowPoint(1, 1))
+                    voids.add(FlowPoint(gridSize - 2, gridSize - 2))
+                }
+            }
+            BoardShapeType.DIAMOND -> {
+                // Diamond / Octagon Cutout
+                val mid = (gridSize - 1) / 2f
+                val maxDist = if (gridSize <= 6) (gridSize - 1) * 0.72f else (gridSize - 1) * 0.70f
                 for (r in 0 until gridSize) {
                     for (c in 0 until gridSize) {
-                        val dTL = r + c
-                        val dTR = r + (gridSize - 1 - c)
-                        val dBL = (gridSize - 1 - r) + c
-                        val dBR = (gridSize - 1 - r) + (gridSize - 1 - c)
-                        if (dTL < cutLimit || dTR < cutLimit || dBL < cutLimit || dBR < cutLimit) {
+                        if (abs(r - mid) + abs(c - mid) > maxDist) {
                             voids.add(FlowPoint(r, c))
                         }
                     }
                 }
             }
-            BoardShape.L_SHAPE -> {
-                // Cut out top-right quadrant to form an L-Corridor shape
-                val cutR = gridSize / 2
-                val cutC = gridSize / 2
-                for (r in 0 until cutR) {
-                    for (c in cutC until gridSize) {
+            BoardShapeType.SWISS_CHEESE -> {
+                // Multiple strategic 1x1 void holes creating intense maze choke points
+                if (gridSize >= 6) {
+                    voids.add(FlowPoint(1, 1))
+                    voids.add(FlowPoint(1, gridSize - 2))
+                    voids.add(FlowPoint(gridSize - 2, 1))
+                    voids.add(FlowPoint(gridSize - 2, gridSize - 2))
+                    if (gridSize >= 8) {
+                        voids.add(FlowPoint(gridSize / 2, gridSize / 2))
+                    }
+                } else {
+                    voids.add(FlowPoint(1, 1))
+                    voids.add(FlowPoint(3, 3))
+                }
+            }
+            BoardShapeType.U_SHAPE -> {
+                // U / Horseshoe Shape (Void at top middle)
+                val cutH = if (gridSize <= 6) 2 else 3
+                val cutWStart = if (gridSize <= 6) 1 else 2
+                val cutWEnd = gridSize - 1 - cutWStart
+                if (cutWEnd >= cutWStart) {
+                    for (r in 0 until cutH) {
+                        for (c in cutWStart..cutWEnd) {
+                            voids.add(FlowPoint(r, c))
+                        }
+                    }
+                }
+            }
+            BoardShapeType.T_SHAPE -> {
+                // T Shape (Bottom-Left and Bottom-Right cutouts)
+                val topH = if (gridSize <= 6) 2 else 2
+                val sideW = if (gridSize <= 6) 1 else 2
+                for (r in topH until gridSize) {
+                    for (c in 0 until sideW) {
+                        voids.add(FlowPoint(r, c))
+                    }
+                    for (c in (gridSize - sideW) until gridSize) {
                         voids.add(FlowPoint(r, c))
                     }
                 }
             }
-            BoardShape.CLASSIC -> {
-                // Full square, no voids
+            BoardShapeType.PINWHEEL -> {
+                // Pinwheel Maze: 4 rotating perimeter notches
+                val notch = if (gridSize <= 6) 1 else 2
+                for (i in 0 until notch) {
+                    voids.add(FlowPoint(0, i))
+                    voids.add(FlowPoint(gridSize - 1 - i, 0))
+                    voids.add(FlowPoint(gridSize - 1, gridSize - 1 - i))
+                    voids.add(FlowPoint(i, gridSize - 1))
+                }
+            }
+            BoardShapeType.HOURGLASS -> {
+                // Hourglass / Butterfly (indented left and right mid-sections)
+                val mid = gridSize / 2
+                val cutDepth = if (gridSize <= 6) 1 else 2
+                for (r in (mid - 1)..(mid + 1)) {
+                    for (c in 0 until cutDepth) {
+                        voids.add(FlowPoint(r, c))
+                        voids.add(FlowPoint(r, gridSize - 1 - c))
+                    }
+                }
+            }
+            BoardShapeType.L_SHAPE -> {
+                // L Shape (Top-Right quadrant is void)
+                val cutSize = if (gridSize <= 6) 2 else 3
+                for (r in 0 until cutSize) {
+                    for (c in (gridSize - cutSize) until gridSize) {
+                        voids.add(FlowPoint(r, c))
+                    }
+                }
+            }
+            BoardShapeType.STAIRCASE -> {
+                // Staircase / Stepped Corners
+                val cut = if (gridSize <= 6) 2 else 3
+                for (r in 0 until cut) {
+                    for (c in 0 until cut) {
+                        if (r + c < cut) {
+                            voids.add(FlowPoint(r, c)) // Top-Left step
+                            voids.add(FlowPoint(gridSize - 1 - r, gridSize - 1 - c)) // Bottom-Right step
+                        }
+                    }
+                }
             }
         }
-        return voids
+
+        return Pair(shapeType, voids)
     }
 
     fun getLevel(level: Int): FlowLevel {
         val safeLevel = level.coerceIn(1, 11178)
 
-        // Configured Mixed Grid Sizes (Dynamically mixed across 6x6 to 10x10):
-        val mixedPattern = listOf(6, 8, 7, 10, 6, 9, 8, 7, 10, 9, 6, 8, 10, 7, 9)
-        val gridSize = when {
-            safeLevel == 1 -> 5
-            safeLevel == 2 -> 5
-            safeLevel == 3 -> 6
-            else -> mixedPattern[(safeLevel - 4) % mixedPattern.size]
+        // Level 1: 3 Dots Per Color Tutorial Level (Classic 5x5 Square)
+        if (safeLevel == 1) {
+            return FlowLevel(
+                level = 1,
+                gridSize = 5,
+                pairs = listOf(
+                    FlowColorPair(
+                        id = 1,
+                        color = COLOR_PALETTE[1].first, // Blue
+                        darkGlow = COLOR_PALETTE[1].second,
+                        name = "Blue",
+                        p1 = FlowPoint(0, 0),
+                        p2 = FlowPoint(2, 0),
+                        p3 = FlowPoint(4, 1),
+                        solution = listOf(
+                            FlowPoint(0, 0), FlowPoint(1, 0), FlowPoint(2, 0),
+                            FlowPoint(3, 0), FlowPoint(4, 0), FlowPoint(4, 1)
+                        )
+                    ),
+                    FlowColorPair(
+                        id = 2,
+                        color = COLOR_PALETTE[0].first, // Red
+                        darkGlow = COLOR_PALETTE[0].second,
+                        name = "Red",
+                        p1 = FlowPoint(0, 3),
+                        p2 = FlowPoint(0, 1),
+                        p3 = FlowPoint(3, 1),
+                        solution = listOf(
+                            FlowPoint(0, 3), FlowPoint(0, 2), FlowPoint(0, 1),
+                            FlowPoint(1, 1), FlowPoint(2, 1), FlowPoint(3, 1)
+                        )
+                    ),
+                    FlowColorPair(
+                        id = 3,
+                        color = COLOR_PALETTE[2].first, // Yellow
+                        darkGlow = COLOR_PALETTE[2].second,
+                        name = "Yellow",
+                        p1 = FlowPoint(1, 3),
+                        p2 = FlowPoint(1, 2),
+                        p3 = FlowPoint(2, 2),
+                        solution = listOf(
+                            FlowPoint(1, 3), FlowPoint(1, 2), FlowPoint(2, 2)
+                        )
+                    ),
+                    FlowColorPair(
+                        id = 4,
+                        color = COLOR_PALETTE[4].first, // Orange
+                        darkGlow = COLOR_PALETTE[4].second,
+                        name = "Orange",
+                        p1 = FlowPoint(0, 4),
+                        p2 = FlowPoint(2, 4),
+                        p3 = FlowPoint(3, 2),
+                        solution = listOf(
+                            FlowPoint(0, 4), FlowPoint(1, 4), FlowPoint(2, 4),
+                            FlowPoint(2, 3), FlowPoint(3, 3), FlowPoint(3, 2)
+                        )
+                    ),
+                    FlowColorPair(
+                        id = 5,
+                        color = COLOR_PALETTE[3].first, // Green
+                        darkGlow = COLOR_PALETTE[3].second,
+                        name = "Green",
+                        p1 = FlowPoint(3, 4),
+                        p2 = FlowPoint(4, 4),
+                        p3 = FlowPoint(4, 2),
+                        solution = listOf(
+                            FlowPoint(3, 4), FlowPoint(4, 4), FlowPoint(4, 3), FlowPoint(4, 2)
+                        )
+                    )
+                ),
+                obstacles = emptyList(),
+                voidCells = emptySet(),
+                shapeName = "Classic"
+            )
         }
 
-        // Shaped Board Selection (Rotates across Classic, Cross, Donut, Diamond, L-Shape)
-        val shape = when {
-            safeLevel == 1 -> BoardShape.CLASSIC
-            safeLevel == 2 -> BoardShape.CLASSIC
-            safeLevel == 3 -> BoardShape.CROSS
-            safeLevel == 4 -> BoardShape.DONUT
-            safeLevel == 5 -> BoardShape.DIAMOND
-            else -> when (safeLevel % 5) {
-                1 -> BoardShape.DONUT
-                2 -> BoardShape.CROSS
-                3 -> BoardShape.DIAMOND
-                4 -> BoardShape.L_SHAPE
-                else -> BoardShape.CLASSIC
+        // MIXED DYNAMIC GRID SIZES (Non-linear, varied grid experience across levels)
+        val gridSize = when {
+            safeLevel <= 25 -> {
+                val mixTable = listOf(
+                    5,  // L1 (Square)
+                    7,  // L2 (Cross +)
+                    6,  // L3 (Square)
+                    8,  // L4 (Donut Ring)
+                    7,  // L5 (Figure-8)
+                    7,  // L6 (Diamond)
+                    8,  // L7 (Square)
+                    6,  // L8 (Swiss Lattice)
+                    7,  // L9 (U-Shape)
+                    8,  // L10 (Pinwheel)
+                    7,  // L11 (Hourglass)
+                    9,  // L12 (Square)
+                    7,  // L13 (T-Shape)
+                    8,  // L14 (L-Shape)
+                    6,  // L15 (Square)
+                    8,  // L16 (Staircase)
+                    9,  // L17 (Diamond)
+                    7,  // L18 (Square)
+                    8,  // L19 (U-Shape)
+                    10, // L20 (Figure-8)
+                    6,  // L21 (Square)
+                    7,  // L22 (T-Shape)
+                    8,  // L23 (Swiss Lattice)
+                    9,  // L24 (Pinwheel)
+                    7   // L25 (Square)
+                )
+                mixTable[(safeLevel - 1) % mixTable.size]
+            }
+            safeLevel <= 100 -> {
+                val midMix = listOf(6, 8, 7, 9, 6, 10, 7, 8, 9, 6, 8, 7, 10, 9, 8, 6, 7, 9, 8, 10)
+                midMix[(safeLevel - 1) % midMix.size]
+            }
+            else -> {
+                val highMix = listOf(7, 9, 8, 10, 8, 9, 7, 10, 9, 8, 10, 7, 9, 10, 8, 9, 10, 8, 7, 10)
+                highMix[(safeLevel - 1) % highMix.size]
             }
         }
 
-        val shapeVoids = getShapeMask(gridSize, shape)
+        // Shape and Void Cells calculation
+        val (shapeType, voidCells) = getBoardShapeAndVoids(safeLevel, gridSize)
+        val playableCellsCount = (gridSize * gridSize) - voidCells.size
 
-        // Additional Stone Obstacles (Deewar / Pathar):
+        // Obstacles (Blocked Cells / Rukawatein) Scaling per playable cells
         val numObstacles = when {
-            safeLevel <= 3 -> 0
-            gridSize <= 6 -> if (safeLevel % 2 == 0) 1 else 0
-            gridSize <= 7 -> if (safeLevel % 2 == 0) 2 else 1
-            gridSize <= 8 -> if (safeLevel % 2 == 0) 3 else 2
-            else -> if (safeLevel % 2 == 0) 4 else 3
+            safeLevel == 1 -> 0
+            playableCellsCount < 22 -> 0
+            gridSize <= 6 -> if (safeLevel % 3 == 0) 1 else 0
+            gridSize == 7 -> if (voidCells.isEmpty()) (1 + safeLevel % 2) else (safeLevel % 2)
+            gridSize == 8 -> if (voidCells.isEmpty()) (2 + safeLevel % 2) else 1
+            else -> if (voidCells.isEmpty()) (2 + safeLevel % 3) else 2
         }
 
-        // Playable cells in this shape
-        val totalPlayableCells = (gridSize * gridSize) - shapeVoids.size - numObstacles
+        // Denser, complex color count per grid
+        val maxPossibleColors = (playableCellsCount / 4).coerceIn(4, minOf(COLOR_PALETTE.size, 10))
         val numColors = when {
-            gridSize <= 5 -> 4
-            gridSize <= 6 -> 5
-            gridSize <= 7 -> 6
-            gridSize <= 8 -> 7
-            gridSize <= 9 -> 8
-            else -> 9
-        }.coerceIn(4, (totalPlayableCells / 3).coerceAtLeast(4).coerceAtMost(COLOR_PALETTE.size))
+            gridSize <= 5 -> 5
+            gridSize == 6 -> minOf(6 + (safeLevel % 2), maxPossibleColors)
+            gridSize == 7 -> minOf(7 + (safeLevel % 2), maxPossibleColors)
+            gridSize == 8 -> minOf(8 + (safeLevel % 2), maxPossibleColors)
+            else -> minOf(9 + (safeLevel % 3), maxPossibleColors)
+        }.coerceIn(4, maxPossibleColors)
 
-        // Deterministic generator with seed
-        val (pairs, blockedCells) = generateSolvablePuzzleWithObstacles(
-            safeLevel,
-            gridSize,
-            numColors,
-            numObstacles,
-            shapeVoids
-        )
-
+        // Deterministic generator with 3 dots per color, distinct palette, seed, snaky paths & obstacles
+        val (pairs, obstacles) = generateSolvablePuzzle(safeLevel, gridSize, numColors, numObstacles, voidCells)
         return FlowLevel(
             level = safeLevel,
             gridSize = gridSize,
             pairs = pairs,
-            blockedCells = blockedCells,
-            shapeVoids = shapeVoids,
-            shape = shape
+            obstacles = obstacles,
+            voidCells = voidCells,
+            shapeName = shapeType.displayName
         )
     }
 
-    private fun generateSolvablePuzzleWithObstacles(
+    // Advanced 3-Dot Winding & Snaky Zig-Zag Puzzle Generator (Respects Void Shape Cutouts)
+    private fun generateSolvablePuzzle(
         level: Int,
         gridSize: Int,
         numColors: Int,
         numObstacles: Int,
-        shapeVoids: Set<FlowPoint>
-    ): Pair<List<FlowColorPair>, Set<FlowPoint>> {
+        voidCells: Set<FlowPoint>
+    ): Pair<List<FlowColorPair>, List<FlowPoint>> {
         val rand = Random(level.toLong() * 999983L + 31337L)
-        val dirs = listOf(Pair(-1, 0), Pair(1, 0), Pair(0, -1), Pair(0, 1))
+        val allDirs = listOf(Pair(-1, 0), Pair(1, 0), Pair(0, -1), Pair(0, 1))
 
-        for (attempt in 0 until 60) {
-            val grid = Array(gridSize) { IntArray(gridSize) { -1 } }
-            
-            // Mark shape voids as -3 (VOID)
-            for (v in shapeVoids) {
-                grid[v.row][v.col] = -3
-            }
+        var bestCandidate: Pair<List<FlowColorPair>, List<FlowPoint>>? = null
+        var bestComplexityScore = -1
 
-            val blocked = mutableSetOf<FlowPoint>()
-
-            // 1. Pick candidate obstacles that do not isolate any cells
-            if (numObstacles > 0) {
-                val candidatePositions = mutableListOf<FlowPoint>()
-                for (r in 0 until gridSize) {
-                    for (c in 0 until gridSize) {
-                        if (grid[r][c] == -1) {
-                            candidatePositions.add(FlowPoint(r, c))
-                        }
-                    }
-                }
-                candidatePositions.shuffle(rand)
-
-                for (pos in candidatePositions) {
-                    if (blocked.size >= numObstacles) break
-                    
-                    blocked.add(pos)
-                    grid[pos.row][pos.col] = -2 // -2 = BLOCKED
-
-                    // Check if open cells remain fully connected using flood fill
-                    val isConnected = checkConnectivity(grid, gridSize)
-                    if (!isConnected) {
-                        blocked.remove(pos)
-                        grid[pos.row][pos.col] = -1
-                    }
-                }
-            }
-
+        for (attempt in 0 until 100) {
+            val grid = Array(gridSize) { IntArray(gridSize) { -1 } } // -1 = empty, -2 = obstacle, -3 = void
             val paths = Array(numColors) { mutableListOf<FlowPoint>() }
 
-            // 2. Seed initial points on non-blocked playable cells
-            val available = mutableListOf<FlowPoint>()
+            // Mark void cells
+            for (pt in voidCells) {
+                if (pt.row in 0 until gridSize && pt.col in 0 until gridSize) {
+                    grid[pt.row][pt.col] = -3
+                }
+            }
+
+            val playablePoints = mutableListOf<FlowPoint>()
             for (r in 0 until gridSize) {
                 for (c in 0 until gridSize) {
-                    if (grid[r][c] == -1) {
-                        available.add(FlowPoint(r, c))
+                    val pt = FlowPoint(r, c)
+                    if (!voidCells.contains(pt)) {
+                        playablePoints.add(pt)
                     }
                 }
             }
-            available.shuffle(rand)
+            playablePoints.shuffle(rand)
 
+            // 1. Select non-clustering obstacle positions from playable points
+            val obstacles = mutableListOf<FlowPoint>()
+            if (numObstacles > 0 && playablePoints.size >= 24) {
+                for (pt in playablePoints) {
+                    if (obstacles.size >= numObstacles) break
+                    val hasAdjacent = obstacles.any { abs(it.row - pt.row) + abs(it.col - pt.col) <= 1 }
+                    if (!hasAdjacent) {
+                        obstacles.add(pt)
+                        grid[pt.row][pt.col] = -2
+                    }
+                }
+            }
+
+            // 2. Spread seeds across available cells
+            val available = playablePoints.filter { !obstacles.contains(it) }.toMutableList()
             if (available.size < numColors * 3) continue
 
             val seedPoints = available.take(numColors)
@@ -268,28 +478,49 @@ object FlowPuzzleLevels {
                 paths[i].add(pt)
             }
 
-            // 3. Grow paths into self-avoiding snakes
+            // 3. Grow paths using Winding & Zig-Zag Perpendicular Steering (95% snaking probability)
             var changed = true
             var iterations = 0
-            while (changed && iterations < 500) {
+            while (changed && iterations < 600) {
                 changed = false
                 iterations++
                 val order = (0 until numColors).shuffled(rand)
+
                 for (colorIdx in order) {
                     val path = paths[colorIdx]
                     if (path.isEmpty()) continue
 
                     val fromEnd = rand.nextBoolean()
                     val cur = if (fromEnd) path.last() else path.first()
+                    val prev = if (path.size > 1) {
+                        if (fromEnd) path[path.size - 2] else path[1]
+                    } else null
 
-                    val shuffledDirs = dirs.shuffled(rand)
-                    for (d in shuffledDirs) {
+                    val prioritizedDirs = if (prev != null) {
+                        val dRow = cur.row - prev.row
+                        val dCol = cur.col - prev.col
+                        val perp1 = Pair(-dCol, dRow)
+                        val perp2 = Pair(dCol, -dRow)
+                        val straight = Pair(dRow, dCol)
+                        val perps = listOf(perp1, perp2).shuffled(rand)
+
+                        // 95% High probability of perpendicular steering for complex winding snaky mazes
+                        if (rand.nextFloat() < 0.95f) {
+                            perps + listOf(straight)
+                        } else {
+                            listOf(straight) + perps
+                        }
+                    } else {
+                        allDirs.shuffled(rand)
+                    }
+
+                    for (d in prioritizedDirs) {
                         val nr = cur.row + d.first
                         val nc = cur.col + d.second
 
                         if (nr in 0 until gridSize && nc in 0 until gridSize && grid[nr][nc] == -1) {
                             var adjacentCount = 0
-                            for (cd in dirs) {
+                            for (cd in allDirs) {
                                 val ar = nr + cd.first
                                 val ac = nc + cd.second
                                 if (ar in 0 until gridSize && ac in 0 until gridSize && grid[ar][ac] == colorIdx) {
@@ -313,33 +544,25 @@ object FlowPuzzleLevels {
                 }
             }
 
-            // Greedily attach any remaining open cells to adjacent paths
-            var attached = true
-            var attachPasses = 0
-            while (attached && attachPasses < 100) {
-                attached = false
-                attachPasses++
-                for (r in 0 until gridSize) {
-                    for (c in 0 until gridSize) {
-                        if (grid[r][c] == -1) {
-                            val pt = FlowPoint(r, c)
-                            for (d in dirs) {
-                                val nr = r + d.first
-                                val nc = c + d.second
-                                if (nr in 0 until gridSize && nc in 0 until gridSize && grid[nr][nc] >= 0) {
-                                    val colorIdx = grid[nr][nc]
-                                    val path = paths[colorIdx]
-                                    if (path.last() == FlowPoint(nr, nc)) {
-                                        grid[r][c] = colorIdx
-                                        path.add(pt)
-                                        attached = true
-                                        break
-                                    } else if (path.first() == FlowPoint(nr, nc)) {
-                                        grid[r][c] = colorIdx
-                                        path.add(0, pt)
-                                        attached = true
-                                        break
-                                    }
+            // 4. Attach unassigned empty cells
+            for (r in 0 until gridSize) {
+                for (c in 0 until gridSize) {
+                    if (grid[r][c] == -1) {
+                        val pt = FlowPoint(r, c)
+                        for (d in allDirs) {
+                            val nr = r + d.first
+                            val nc = c + d.second
+                            if (nr in 0 until gridSize && nc in 0 until gridSize && grid[nr][nc] >= 0) {
+                                val colorIdx = grid[nr][nc]
+                                val path = paths[colorIdx]
+                                if (path.last() == FlowPoint(nr, nc)) {
+                                    grid[r][c] = colorIdx
+                                    path.add(pt)
+                                    break
+                                } else if (path.first() == FlowPoint(nr, nc)) {
+                                    grid[r][c] = colorIdx
+                                    path.add(0, pt)
+                                    break
                                 }
                             }
                         }
@@ -347,229 +570,122 @@ object FlowPuzzleLevels {
                 }
             }
 
-            // Check validity: all paths must have length >= 3
+            // 5. Evaluate: Check length >= 3 for all paths so 3 distinct dots exist
             val allValid = paths.all { it.size >= 3 }
-            val totalPlayableCells = gridSize * gridSize - blocked.size - shapeVoids.size
             val filledCells = paths.sumOf { it.size }
+            val targetFill = (playablePoints.size - obstacles.size) * 0.75
 
-            if (allValid && filledCells >= totalPlayableCells) {
-                val computedPairs = paths.mapIndexed { idx, path ->
-                    val colorPair = COLOR_PALETTE[idx % COLOR_PALETTE.size]
-                    val colorName = COLOR_NAMES[idx % COLOR_NAMES.size]
-                    
-                    val dot1 = path.first()
-                    val dot3 = path.last()
-
-                    // Choose intermediate checkpoint Dot 2 with best spacing along the continuous path
-                    val bestMid = if (path.size >= 4) {
-                        var bestCandidate = path[path.size / 2]
-                        var maxScore = -1
-                        for (i in 1 until path.size - 1) {
-                            val cand = path[i]
-                            val dist1 = abs(cand.row - dot1.row) + abs(cand.col - dot1.col)
-                            val dist3 = abs(cand.row - dot3.row) + abs(cand.col - dot3.col)
-                            val score = minOf(dist1, dist3) * 10 + (dist1 + dist3)
-                            if (score > maxScore) {
-                                maxScore = score
-                                bestCandidate = cand
-                            }
+            if (allValid && filledCells >= targetFill) {
+                var totalTurns = 0
+                for (path in paths) {
+                    for (i in 1 until path.size - 1) {
+                        val dr1 = path[i].row - path[i - 1].row
+                        val dc1 = path[i].col - path[i - 1].col
+                        val dr2 = path[i + 1].row - path[i].row
+                        val dc2 = path[i + 1].col - path[i].col
+                        if (dr1 != dr2 || dc1 != dc2) {
+                            totalTurns++
                         }
-                        bestCandidate
-                    } else {
-                        path[1]
                     }
+                }
 
-                    val dots = listOf(dot1, bestMid, dot3)
+                // Dot dispersion score (further apart dots = harder puzzle)
+                var dotDispersion = 0
+                for (path in paths) {
+                    val p1 = path.first()
+                    val p2 = path[path.size / 2]
+                    val p3 = path.last()
+                    dotDispersion += abs(p1.row - p2.row) + abs(p1.col - p2.col) +
+                                     abs(p2.row - p3.row) + abs(p2.col - p3.col)
+                }
 
+                val complexityScore = (totalTurns * 4) + (filledCells * 3) + (dotDispersion * 2)
+
+                val pairs = paths.mapIndexed { idx, path ->
+                    val colorPair = COLOR_PALETTE[idx]
+                    val colorName = COLOR_NAMES[idx]
+                    val midIdx = path.size / 2
                     FlowColorPair(
                         id = idx + 1,
                         color = colorPair.first,
                         darkGlow = colorPair.second,
                         name = colorName,
-                        dots = dots,
+                        p1 = path.first(),
+                        p2 = path[midIdx], // 2nd Dot (Middle)
+                        p3 = path.last(),  // 3rd Dot (End)
                         solution = path
                     )
                 }
 
-                return Pair(computedPairs, blocked)
-            }
-        }
-
-        // Guaranteed 100% solvable continuous snake partitioner
-        return Pair(generateGuaranteedContinuousPuzzle(level, gridSize, numColors, shapeVoids), emptySet())
-    }
-
-    private fun checkConnectivity(grid: Array<IntArray>, gridSize: Int): Boolean {
-        var startR = -1
-        var startC = -1
-        var openCount = 0
-
-        for (r in 0 until gridSize) {
-            for (c in 0 until gridSize) {
-                if (grid[r][c] != -2 && grid[r][c] != -3) {
-                    openCount++
-                    if (startR == -1) {
-                        startR = r
-                        startC = c
-                    }
+                if (complexityScore > bestComplexityScore) {
+                    bestComplexityScore = complexityScore
+                    bestCandidate = Pair(pairs, obstacles)
                 }
             }
         }
 
-        if (openCount == 0) return false
-
-        val visited = Array(gridSize) { BooleanArray(gridSize) }
-        val queue = ArrayDeque<Pair<Int, Int>>()
-        queue.add(Pair(startR, startC))
-        visited[startR][startC] = true
-        var reached = 0
-
-        val dirs = listOf(Pair(-1, 0), Pair(1, 0), Pair(0, -1), Pair(0, 1))
-
-        while (queue.isNotEmpty()) {
-            val (r, c) = queue.removeFirst()
-            reached++
-
-            for (d in dirs) {
-                val nr = r + d.first
-                val nc = c + d.second
-                if (nr in 0 until gridSize && nc in 0 until gridSize && !visited[nr][nc] && grid[nr][nc] != -2 && grid[nr][nc] != -3) {
-                    visited[nr][nc] = true
-                    queue.add(Pair(nr, nc))
-                }
-            }
+        if (bestCandidate != null) {
+            return bestCandidate
         }
 
-        return reached == openCount
+        // Fallback with unique 3 dots per color respecting voids and obstacles
+        return Pair(generateFallbackSnakePuzzle(level, gridSize, numColors, voidCells, emptyList()), emptyList())
     }
 
-    /**
-     * Builds a single continuous non-intersecting snake covering all playable cells
-     * and partitions it into numColors segments.
-     * GUARANTEE: 100% mathematically solvable on ANY board shape.
-     */
-    private fun generateGuaranteedContinuousPuzzle(
+    private fun generateFallbackSnakePuzzle(
         level: Int,
         gridSize: Int,
         numColors: Int,
-        shapeVoids: Set<FlowPoint>
+        voidCells: Set<FlowPoint>,
+        obstacles: List<FlowPoint>
     ): List<FlowColorPair> {
-        val rand = Random(level.toLong() * 777767L + 12345L)
-        val dirs = listOf(Pair(-1, 0), Pair(1, 0), Pair(0, -1), Pair(0, 1))
-
-        // Collect all playable points
-        val playable = mutableSetOf<FlowPoint>()
+        val result = mutableListOf<FlowColorPair>()
+        val playable = mutableListOf<FlowPoint>()
         for (r in 0 until gridSize) {
-            for (c in 0 until gridSize) {
+            val cols = if (r % 2 == 0) (0 until gridSize) else (gridSize - 1 downTo 0)
+            for (c in cols) {
                 val pt = FlowPoint(r, c)
-                if (!shapeVoids.contains(pt)) {
+                if (!voidCells.contains(pt) && !obstacles.contains(pt)) {
                     playable.add(pt)
                 }
             }
         }
 
-        // Build continuous snake path via DFS with backtracking
-        val fullSnake = mutableListOf<FlowPoint>()
-        val startPt = playable.minByOrNull { it.row * 10 + it.col } ?: FlowPoint(0, 0)
-        
-        val visited = mutableSetOf<FlowPoint>()
-        fun dfs(cur: FlowPoint): Boolean {
-            fullSnake.add(cur)
-            visited.add(cur)
+        if (playable.isEmpty()) return emptyList()
 
-            if (visited.size == playable.size) return true
+        val paths = Array(numColors) { mutableListOf<FlowPoint>() }
+        val perColor = maxOf(3, playable.size / numColors)
 
-            // Prioritize neighbors that keep graph connected (Warnsdorff heuristic)
-            val neighbors = dirs.map { FlowPoint(cur.row + it.first, cur.col + it.second) }
-                .filter { playable.contains(it) && !visited.contains(it) }
-                .shuffled(rand)
-
-            for (next in neighbors) {
-                if (dfs(next)) return true
-            }
-
-            // Backtrack if dead end
-            visited.remove(cur)
-            fullSnake.removeAt(fullSnake.size - 1)
-            return false
-        }
-
-        dfs(startPt)
-
-        // If DFS found full snake, use it; otherwise collect visited points
-        val orderPoints = if (fullSnake.size >= playable.size) {
-            fullSnake.toList()
-        } else {
-            // Greedy fallback traversal
-            val greedy = mutableListOf<FlowPoint>()
-            val rem = playable.toMutableSet()
-            var cur = startPt
-            greedy.add(cur)
-            rem.remove(cur)
-
-            while (rem.isNotEmpty()) {
-                val next = dirs.map { FlowPoint(cur.row + it.first, cur.col + it.second) }
-                    .firstOrNull { rem.contains(it) }
-                    ?: rem.minByOrNull { abs(it.row - cur.row) + abs(it.col - cur.col) }!!
-                
-                greedy.add(next)
-                rem.remove(next)
-                cur = next
-            }
-            greedy
-        }
-
-        // Partition the continuous points into numColors contiguous non-overlapping slices
-        val actualColors = numColors.coerceIn(3, (orderPoints.size / 3).coerceAtLeast(3).coerceAtMost(COLOR_PALETTE.size))
-        val segmentSize = orderPoints.size / actualColors
-        val segments = mutableListOf<List<FlowPoint>>()
-
-        for (i in 0 until actualColors) {
-            val startIdx = i * segmentSize
-            val endIdx = if (i == actualColors - 1) orderPoints.size else (i + 1) * segmentSize
-            val segment = orderPoints.subList(startIdx, endIdx)
-            if (segment.isNotEmpty()) {
-                segments.add(segment)
+        var colorIdx = 0
+        for (pt in playable) {
+            paths[colorIdx].add(pt)
+            if (paths[colorIdx].size >= perColor && colorIdx < numColors - 1) {
+                colorIdx++
             }
         }
 
-        return segments.mapIndexed { idx, path ->
-            val colorPair = COLOR_PALETTE[idx % COLOR_PALETTE.size]
-            val colorName = COLOR_NAMES[idx % COLOR_NAMES.size]
-
-            val dot1 = path.first()
-            val dot3 = path.last()
-            val bestMid = if (path.size >= 4) {
-                var best = path[path.size / 2]
-                var maxScore = -1
-                for (i in 1 until path.size - 1) {
-                    val cand = path[i]
-                    val d1 = abs(cand.row - dot1.row) + abs(cand.col - dot1.col)
-                    val d3 = abs(cand.row - dot3.row) + abs(cand.col - dot3.col)
-                    val score = minOf(d1, d3) * 10 + (d1 + d3)
-                    if (score > maxScore) {
-                        maxScore = score
-                        best = cand
-                    }
-                }
-                best
-            } else if (path.size == 3) {
-                path[1]
-            } else {
-                path.first()
+        for (i in 0 until numColors) {
+            val path = paths[i]
+            if (path.isNotEmpty()) {
+                val colorPair = COLOR_PALETTE[i % COLOR_PALETTE.size]
+                val colorName = COLOR_NAMES[i % COLOR_NAMES.size]
+                val midIdx = if (path.size >= 3) path.size / 2 else 0
+                result.add(
+                    FlowColorPair(
+                        id = i + 1,
+                        color = colorPair.first,
+                        darkGlow = colorPair.second,
+                        name = colorName,
+                        p1 = path.first(),
+                        p2 = path[midIdx],
+                        p3 = path.last(),
+                        solution = path
+                    )
+                )
             }
-
-            val dots = if (path.size >= 3) listOf(dot1, bestMid, dot3) else listOf(dot1, dot3)
-
-            FlowColorPair(
-                id = idx + 1,
-                color = colorPair.first,
-                darkGlow = colorPair.second,
-                name = colorName,
-                dots = dots,
-                solution = path
-            )
         }
+
+        return result
     }
 }
 
@@ -579,7 +695,8 @@ fun FlowGameBoard(
     restartTrigger: Int,
     hintTrigger: Int,
     onMoveMade: () -> Unit,
-    onWin: () -> Unit,
+    onWin: () -> Unit = {},
+    onWinWithSolution: (Map<Int, List<FlowPoint>>) -> Unit = {},
     onLifeLost: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -589,11 +706,8 @@ fun FlowGameBoard(
 
     val gridSize = currentLevelData.gridSize
     val pairs = currentLevelData.pairs
-    val blockedCells = currentLevelData.blockedCells
-    val shapeVoids = currentLevelData.shapeVoids
-    val allBlocked = remember(blockedCells, shapeVoids) {
-        blockedCells + shapeVoids
-    }
+    val obstacles = currentLevelData.obstacles
+    val voidCells = currentLevelData.voidCells
 
     // State of paths drawn for each color id
     val paths = remember(level, restartTrigger) {
@@ -621,12 +735,15 @@ fun FlowGameBoard(
     }
     val spacingPx = with(LocalDensity.current) { spacingDp.toPx() }
 
+    // Fully connected if all 3 dots of that color are present in the path and starts/ends on dots
     fun isPairFullyConnected(pairId: Int, path: List<FlowPoint>): Boolean {
         val pair = pairs.find { it.id == pairId } ?: return false
-        if (path.isEmpty()) return false
-        val hasAllDots = pair.dots.all { path.contains(it) }
-        val endsAtDots = pair.dots.contains(path.first()) && pair.dots.contains(path.last()) && path.first() != path.last()
-        return hasAllDots && endsAtDots
+        if (path.size < 3) return false
+        val containsAllDots = pair.dots.all { path.contains(it) }
+        val startsOnDot = pair.dots.contains(path.first())
+        val endsOnDot = pair.dots.contains(path.last())
+        val distinctEnds = path.first() != path.last()
+        return containsAllDots && startsOnDot && endsOnDot && distinctEnds
     }
 
     // Win check function: checks if all pairs are connected
@@ -645,6 +762,7 @@ fun FlowGameBoard(
             isWon = true
             SoundManager.playLevelWinSound()
             onWin()
+            onWinWithSolution(paths.toMap())
         }
     }
 
@@ -692,15 +810,16 @@ fun FlowGameBoard(
                         val row = (offset.y / stepY).toInt().coerceIn(0, gridSize - 1)
                         val touchedPoint = FlowPoint(row, col)
 
-                        // Do not start drag on blocked obstacle cells or shape voids
-                        if (allBlocked.contains(touchedPoint)) return@detectDragGestures
+                        // Cannot start on obstacle or void blank cell
+                        if (obstacles.contains(touchedPoint) || voidCells.contains(touchedPoint)) return@detectDragGestures
 
+                        // Check if touched any of the 3 dots of any color
                         val touchedPair = pairs.find { it.dots.contains(touchedPoint) }
                         if (touchedPair != null) {
                             currentDrawingPairId = touchedPair.id
                             paths[touchedPair.id] = listOf(touchedPoint)
                         } else {
-                            // Check if touched existing path of a dot
+                            // Check if touched existing path of a color
                             for ((id, path) in paths) {
                                 val idx = path.indexOf(touchedPoint)
                                 if (idx != -1) {
@@ -712,9 +831,11 @@ fun FlowGameBoard(
                         }
                     },
                     onDrag = { change, _ ->
+                        change.consume()
                         val activeId = currentDrawingPairId ?: return@detectDragGestures
                         val pair = pairs.find { it.id == activeId } ?: return@detectDragGestures
-                        val currentPath = paths[activeId] ?: return@detectDragGestures
+                        var currentPath = paths[activeId] ?: return@detectDragGestures
+                        if (currentPath.isEmpty()) return@detectDragGestures
 
                         val totalW = size.width
                         val totalH = size.height
@@ -727,73 +848,85 @@ fun FlowGameBoard(
                         val targetRow = (change.position.y / stepY).toInt().coerceIn(0, gridSize - 1)
                         val curCell = FlowPoint(targetRow, targetCol)
 
-                        if (currentPath.isNotEmpty() && currentPath.last() != curCell) {
-                            val lastCell = currentPath.last()
-                            val dr = curCell.row - lastCell.row
-                            val dc = curCell.col - lastCell.col
+                        // 1. Direct Backtrack Check (if finger dragged back onto existing segment of this path)
+                        val backIdx = currentPath.indexOf(curCell)
+                        if (backIdx != -1 && backIdx < currentPath.size - 1) {
+                            currentPath = currentPath.take(backIdx + 1)
+                            paths[activeId] = currentPath
+                            return@detectDragGestures
+                        }
 
-                            // Strictly Orthogonal Movement: Only Left, Right, Up, Down
-                            val stepsToTake = mutableListOf<FlowPoint>()
-                            if (abs(dr) + abs(dc) == 1) {
-                                stepsToTake.add(curCell)
-                            } else if (abs(dr) > 0 || abs(dc) > 0) {
-                                if (abs(dr) >= abs(dc) && dr != 0) {
-                                    val stepR = if (dr > 0) 1 else -1
-                                    stepsToTake.add(FlowPoint(lastCell.row + stepR, lastCell.col))
-                                } else if (dc != 0) {
-                                    val stepC = if (dc > 0) 1 else -1
-                                    stepsToTake.add(FlowPoint(lastCell.row, lastCell.col + stepC))
+                        // 2. Strict 4-Way Orthogonal Step-by-Step Movement (Left, Right, Up, Down only)
+                        var currR = currentPath.last().row
+                        var currC = currentPath.last().col
+
+                        while (currR != targetRow || currC != targetCol) {
+                            val dr = targetRow - currR
+                            val dc = targetCol - currC
+
+                            // Determine next 1-step orthogonal direction (Left, Right, Up, or Down)
+                            if (abs(dr) >= abs(dc) && dr != 0) {
+                                currR += if (dr > 0) 1 else -1
+                            } else if (dc != 0) {
+                                currC += if (dc > 0) 1 else -1
+                            } else if (dr != 0) {
+                                currR += if (dr > 0) 1 else -1
+                            } else {
+                                break
+                            }
+
+                            val stepCell = FlowPoint(currR, currC)
+
+                            // Rule 1: Cannot move into obstacles or void blank cells
+                            if (obstacles.contains(stepCell) || voidCells.contains(stepCell)) {
+                                break
+                            }
+
+                            // Rule 2: Cannot step on another color's dots
+                            val isOtherColorDot = pairs.any { it.id != activeId && it.dots.contains(stepCell) }
+                            if (isOtherColorDot) {
+                                break
+                            }
+
+                            // Rule 3: If stepping onto its own path, backtrack to that position
+                            val stepBackIdx = currentPath.indexOf(stepCell)
+                            if (stepBackIdx != -1) {
+                                currentPath = currentPath.take(stepBackIdx + 1)
+                                paths[activeId] = currentPath
+                                continue
+                            }
+
+                            // Rule 4: If current path is already fully connected (all dots visited), cannot extend further
+                            if (isPairFullyConnected(activeId, currentPath)) {
+                                break
+                            }
+
+                            // Rule 5: Disconnect other color pipe if crossing it
+                            for ((otherId, otherPath) in paths.entries.toList()) {
+                                if (otherId != activeId && otherPath.contains(stepCell)) {
+                                    val wasConnected = isPairFullyConnected(otherId, otherPath)
+                                    val cutIdx = otherPath.indexOf(stepCell)
+                                    paths[otherId] = otherPath.take(cutIdx)
+                                    SoundManager.playPipeBreakSound()
+                                    if (wasConnected) {
+                                        onLifeLost()
+                                    }
                                 }
                             }
 
-                            for (stepCell in stepsToTake) {
-                                // Blocked obstacle cells and shape voids cannot be crossed
-                                if (allBlocked.contains(stepCell)) {
-                                    continue
-                                }
+                            // Append strictly orthogonal step (Left, Right, Up, Down)
+                            val isHittingNewDot = pair.dots.contains(stepCell) && !currentPath.contains(stepCell)
+                            currentPath = currentPath + stepCell
+                            paths[activeId] = currentPath
 
-                                val activePathNow = paths[activeId] ?: currentPath
-                                val lastStep = activePathNow.last()
-                                val isAdjacent = (abs(stepCell.row - lastStep.row) + abs(stepCell.col - lastStep.col)) == 1
+                            if (isHittingNewDot || isPairFullyConnected(activeId, currentPath)) {
+                                SoundManager.playPipeConnectSound()
+                            }
+                            checkWinCondition()
 
-                                if (isAdjacent) {
-                                    val isOtherEndpoint = pairs.any {
-                                        it.id != activeId && it.dots.contains(stepCell)
-                                    }
-
-                                    if (!isOtherEndpoint) {
-                                        // Disconnect other color if crossing
-                                        for ((otherId, otherPath) in paths.entries.toList()) {
-                                            if (otherId != activeId && otherPath.contains(stepCell)) {
-                                                val wasConnected = isPairFullyConnected(otherId, otherPath)
-                                                val cutIdx = otherPath.indexOf(stepCell)
-                                                paths[otherId] = otherPath.take(cutIdx)
-                                                SoundManager.playPipeBreakSound()
-                                                if (wasConnected) {
-                                                    onLifeLost()
-                                                }
-                                            }
-                                        }
-
-                                        // Check backtracking
-                                        val backIdx = activePathNow.indexOf(stepCell)
-                                        if (backIdx != -1) {
-                                            paths[activeId] = activePathNow.take(backIdx + 1)
-                                        } else {
-                                            val isAlreadyConnected = isPairFullyConnected(activeId, activePathNow)
-
-                                            if (!isAlreadyConnected) {
-                                                val newPath = activePathNow + stepCell
-                                                paths[activeId] = newPath
-                                                // Play connect sound whenever reaching ANY target dot (Dot 1 -> Dot 2, and Dot 2 -> Dot 3)
-                                                if (pair.dots.contains(stepCell)) {
-                                                    SoundManager.playPipeConnectSound()
-                                                }
-                                                checkWinCondition()
-                                            }
-                                        }
-                                    }
-                                }
+                            // If connected to the final target dot, stop stepping further
+                            if (isPairFullyConnected(activeId, currentPath)) {
+                                break
                             }
                         }
                     },
@@ -809,7 +942,7 @@ fun FlowGameBoard(
             },
         contentAlignment = Alignment.Center
     ) {
-        // 1. GRID BOXES WITH 3D OBSTACLE TILES AND SHAPE VOIDS
+        // 1. GRID BOXES (With Obstacles & Blank Void Cutouts Support)
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(spacingDp, Alignment.CenterVertically),
@@ -823,100 +956,64 @@ fun FlowGameBoard(
                 ) {
                     for (col in 0 until gridSize) {
                         val pt = FlowPoint(row, col)
-                        val isVoid = shapeVoids.contains(pt)
-                        val isBlocked = blockedCells.contains(pt)
+                        val isVoid = voidCells.contains(pt)
+                        val isObstacle = obstacles.contains(pt)
+
                         if (isVoid) {
-                            // Transparent empty cutout slot for irregular board shape silhouette
-                            Box(
+                            // Blank Void: Transparent spacer (no grid cell box or border)
+                            Spacer(
                                 modifier = Modifier
                                     .weight(1f)
                                     .aspectRatio(1f)
                             )
-                        } else if (isBlocked) {
-                            // 3D Stone / Wall / Obstacle (Deewar / Pathar)
+                        } else {
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .aspectRatio(1f)
                                     .background(
-                                        brush = Brush.verticalGradient(
-                                            listOf(
-                                                Color(0xFF475569),
-                                                Color(0xFF1E293B),
-                                                Color(0xFF0F172A)
-                                            )
-                                        ),
+                                        color = if (isObstacle) Color(0xFF1E2028).copy(alpha = 0.88f) else Color.White.copy(alpha = 0.12f),
                                         shape = RoundedCornerShape(cornerDp)
                                     )
                                     .border(
-                                        width = 1.8.dp,
-                                        brush = Brush.linearGradient(
-                                            listOf(
-                                                Color(0xFF94A3B8),
-                                                Color(0xFF475569),
-                                                Color(0xFF0F172A)
-                                            )
-                                        ),
+                                        width = if (isObstacle) 1.5.dp else 1.dp,
+                                        color = if (isObstacle) Color(0xFFFF5252).copy(alpha = 0.65f) else Color.White.copy(alpha = 0.25f),
                                         shape = RoundedCornerShape(cornerDp)
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                // Engraved 3D Stone/Wall Pattern
-                                Canvas(modifier = Modifier.fillMaxSize().padding(4.dp)) {
-                                    val w = size.width
-                                    val h = size.height
-                                    
-                                    // Diagonal barrier lines (Pathar/Deewar Texture)
-                                    drawLine(
-                                        color = Color(0xFF64748B).copy(alpha = 0.5f),
-                                        start = Offset(w * 0.2f, h * 0.2f),
-                                        end = Offset(w * 0.8f, h * 0.8f),
-                                        strokeWidth = 2.dp.toPx(),
-                                        cap = StrokeCap.Round
-                                    )
-                                    drawLine(
-                                        color = Color(0xFF64748B).copy(alpha = 0.5f),
-                                        start = Offset(w * 0.8f, h * 0.2f),
-                                        end = Offset(w * 0.2f, h * 0.8f),
-                                        strokeWidth = 2.dp.toPx(),
-                                        cap = StrokeCap.Round
-                                    )
-                                    // Center metal rivet / stone notch
-                                    drawCircle(
-                                        color = Color(0xFF94A3B8),
-                                        radius = w * 0.12f,
-                                        center = Offset(w / 2f, h / 2f)
-                                    )
-                                    drawCircle(
-                                        color = Color(0xFF0F172A),
-                                        radius = w * 0.06f,
-                                        center = Offset(w / 2f, h / 2f)
-                                    )
+                                if (isObstacle) {
+                                    Canvas(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(if (gridSize <= 6) 7.dp else 4.dp)
+                                    ) {
+                                        val strokeW = if (gridSize <= 6) 2.5.dp.toPx() else 1.8.dp.toPx()
+                                        val obstacleColor = Color(0xFFFF5252).copy(alpha = 0.75f)
+                                        drawLine(
+                                            color = obstacleColor,
+                                            start = Offset(0f, 0f),
+                                            end = Offset(size.width, size.height),
+                                            strokeWidth = strokeW,
+                                            cap = StrokeCap.Round
+                                        )
+                                        drawLine(
+                                            color = obstacleColor,
+                                            start = Offset(size.width, 0f),
+                                            end = Offset(0f, size.height),
+                                            strokeWidth = strokeW,
+                                            cap = StrokeCap.Round
+                                        )
+                                    }
                                 }
                             }
-                        } else {
-                            // Normal playable grid cell
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .aspectRatio(1f)
-                                    .background(
-                                        color = Color.White.copy(alpha = 0.12f),
-                                        shape = RoundedCornerShape(cornerDp)
-                                    )
-                                    .border(
-                                        width = 1.dp,
-                                        color = Color.White.copy(alpha = 0.25f),
-                                        shape = RoundedCornerShape(cornerDp)
-                                    )
-                            )
                         }
                     }
                 }
             }
         }
 
-        // 2. CANVAS FOR PIPES AND DOTS ON TOP OF THE EXACT GRID
+        // 2. CANVAS FOR PIPES AND VIBRANT CANDY GEMS (EXACTLY 3 DOTS PER UNIQUE COLOR)
         Canvas(modifier = Modifier.fillMaxSize()) {
             val totalW = size.width
             val totalH = size.height
@@ -926,16 +1023,15 @@ fun FlowGameBoard(
             val stepY = cellH + spacingPx
 
             val pipeStroke = cellW * 0.44f
-            val dotRadius = cellW * 0.36f
+            val dotRadius = cellW * 0.35f
 
-            // Helper to get center offset of any grid box (row, col)
             fun getCenter(r: Int, c: Int): Offset {
                 val cx = c * stepX + cellW / 2f
                 val cy = r * stepY + cellH / 2f
                 return Offset(cx, cy)
             }
 
-            // Draw Pipes (Connecting paths)
+            // Draw Pipes
             for (pair in pairs) {
                 val path = paths[pair.id] ?: continue
                 if (path.size > 1) {
@@ -948,7 +1044,6 @@ fun FlowGameBoard(
                         composePath.lineTo(nextCenter.x, nextCenter.y)
                     }
 
-                    // Pipe Stroke
                     drawPath(
                         path = composePath,
                         color = pair.color,
@@ -961,22 +1056,62 @@ fun FlowGameBoard(
                 }
             }
 
-            // Draw Endpoint Dots (Solid clean circular dots centered in their exact boxes)
+            // Draw Vibrant Candy Neon Gem Dots (Exactly 3 Dots per Unique Color)
             for (pair in pairs) {
                 for (dot in pair.dots) {
-                    val dotCenter = getCenter(dot.row, dot.col)
+                    val center = getCenter(dot.row, dot.col)
+
+                    // 1. Outer Soft Colored Neon Glow Aura
                     drawCircle(
-                        color = pair.color,
-                        radius = dotRadius,
-                        center = dotCenter
+                        color = pair.color.copy(alpha = 0.40f),
+                        radius = dotRadius * 1.28f,
+                        center = center
                     )
-                    if (pair.dots.size >= 3) {
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.55f),
-                            radius = dotRadius * 0.35f,
-                            center = dotCenter
-                        )
-                    }
+
+                    // 2. Outer Accent Border Ring (Crisp & Vibrant)
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.92f),
+                        radius = dotRadius * 1.05f,
+                        center = center,
+                        style = Stroke(width = if (gridSize <= 6) 2.5.dp.toPx() else 1.8.dp.toPx())
+                    )
+
+                    // 3. Vibrant Solid Candy Sphere (Radial Gradient)
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.65f),
+                                pair.color,
+                                pair.darkGlow
+                            ),
+                            center = Offset(center.x - dotRadius * 0.25f, center.y - dotRadius * 0.30f),
+                            radius = dotRadius * 1.15f
+                        ),
+                        radius = dotRadius,
+                        center = center
+                    )
+
+                    // 4. Glossy Specular Glass Arc Highlight (Top Dome Reflection)
+                    drawOval(
+                        color = Color.White.copy(alpha = 0.70f),
+                        topLeft = Offset(center.x - dotRadius * 0.50f, center.y - dotRadius * 0.70f),
+                        size = Size(dotRadius * 1.0f, dotRadius * 0.50f)
+                    )
+
+                    // 5. Inner Crisp Target Ring (Arcade Jewel Center)
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.85f),
+                        radius = dotRadius * 0.28f,
+                        center = center,
+                        style = Stroke(width = 1.5.dp.toPx())
+                    )
+
+                    // 6. Center Sparkle Dot
+                    drawCircle(
+                        color = Color.White,
+                        radius = dotRadius * 0.12f,
+                        center = center
+                    )
                 }
             }
         }

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -91,7 +91,7 @@ if (empty($_SESSION['admin_logged_in'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ColorLinker • Admin Login</title>
+    <title>Pipecraze • Admin Login</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -231,7 +231,7 @@ if (empty($_SESSION['admin_logged_in'])) {
     <div class="login-card">
         <div class="brand-header">
             <div class="brand-logo">🏹</div>
-            <h1 class="brand-title">ColorLinker Studio</h1>
+            <h1 class="brand-title">Pipecraze Studio</h1>
             <p class="brand-desc">Secure Management & Payout Control Center</p>
         </div>
 
@@ -1624,7 +1624,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ColorLinker Game Control Center • Admin Studio</title>
+    <title>Pipecraze Game Control Center • Admin Studio</title>
     <!-- Modern Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2307,7 +2307,7 @@ try {
     <div class="brand">
         <div class="brand-logo">🎯</div>
         <div class="brand-text">
-            <h3>ColorLinker Control</h3>
+            <h3>Pipecraze Control</h3>
             <p>Admin Studio v2.0</p>
         </div>
     </div>
@@ -3906,7 +3906,7 @@ try {
                                     'game_reset' => [
                                         'icon' => '🔄',
                                         'title' => 'In-Game - Level Reset Button',
-                                        'desc' => 'Fires when user resets current puzzle inside game.',
+                                        'desc' => 'Fires when user resets current pipe puzzle inside game.',
                                         'type' => 'standard'
                                     ],
                                     'game_hint' => [
@@ -4203,7 +4203,7 @@ try {
                                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <div style="width: 24px; height: 24px; border-radius: 6px; background: linear-gradient(135deg, #6366f1, #a855f7); display: flex; align-items: center; justify-content: center; font-size: 13px; box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);">🏹</div>
-                                        <span style="font-size: 12px; font-weight: 700; color: #cbd5e1;">ColorLinker</span>
+                                        <span style="font-size: 12px; font-weight: 700; color: #cbd5e1;">Pipecraze</span>
                                         <span style="font-size: 11px; color: #64748b;">• now</span>
                                     </div>
                                     <span style="font-size: 11px; color: #64748b; cursor: pointer;">⌄</span>
@@ -4967,7 +4967,7 @@ try {
             if (btnIn) btnIn.value = 'Claim ₹150 💸';
         } else if (type === 'new_challenge') {
             if (titleIn) titleIn.value = '🏹 50 New Puzzle Levels Unlocked!';
-            if (msgIn) msgIn.value = 'Brand new challenging color linker puzzles have been added. Can you solve all of them without losing lives?';
+            if (msgIn) msgIn.value = 'Brand new challenging pipe puzzles have been added. Can you solve all of them without losing lives?';
             if (actionTypeIn) actionTypeIn.value = 'open_app';
             if (btnIn) btnIn.value = 'Play Now 🏹';
         } else if (type === 'streak') {
@@ -5631,7 +5631,7 @@ try {
         document.getElementById('auditUserIp').textContent = user.registration_ip || 'N/A';
 
         // 3. Hardware Card
-        document.getElementById('auditPkgName').textContent = user.pkg_name || 'com.colorlinker.puzzle';
+        document.getElementById('auditPkgName').textContent = user.pkg_name || 'com.pipecraze.puzzle';
         document.getElementById('auditGid').textContent = user.gid || user.dk_gid || 'Not Reported';
         const keyActive = (parseInt(user.key_is_active ?? 1) === 1);
         document.getElementById('auditKeyStatus').innerHTML = keyActive 
